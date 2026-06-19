@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Starting 5 Simulator</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0a0f;--bg2:#12121a;--card:#1a1a28;--card-hover:#222236;
+  --surface:#252540;--surface2:#2e2e4a;
+  --text:#e8e8f0;--text2:#b0b0c8;--muted:#6e6e8a;
+  --accent:#6c5ce7;--accent2:#a78bfa;--accent-glow:rgba(108,92,231,.25);
+  --team-a:#e74c3c;--team-a-dim:rgba(231,76,60,.15);--team-a-med:rgba(231,76,60,.3);
+  --team-b:#3498db;--team-b-dim:rgba(52,152,219,.15);--team-b-med:rgba(52,152,219,.3);
+  --green:#2ecc71;--red:#e74c3c;--gold:#f1c40f;
+  --border:rgba(255,255,255,.06);--border2:rgba(255,255,255,.1);
+  --shadow:0 4px 24px rgba(0,0,0,.4);--shadow-lg:0 12px 48px rgba(0,0,0,.5);
+  --radius:14px;--radius-sm:10px;
+}
+html{scroll-behavior:smooth}
+body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:20px 16px 60px;line-height:1.5}
+.header{text-align:center;margin-bottom:28px;padding-top:8px}
+.header h1{font-size:1.8rem;font-weight:800;letter-spacing:-.03em;background:linear-gradient(135deg,var(--accent2),var(--accent),#e74c3c,#3498db);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.header p{color:var(--muted);font-size:.85rem;margin-top:4px;font-weight:500}
+
+.arena{display:grid;grid-template-columns:1fr 80px 1fr;gap:16px;max-width:1120px;margin:0 auto;align-items:start}
+@media(max-width:860px){.arena{grid-template-columns:1fr;gap:12px}.vs-col{order:-1;padding:0;flex-direction:row;justify-content:center}}
+
+.team-card{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;transition:border-color .2s}
+.team-card:hover{border-color:var(--border2)}
+.team-a .team-stripe{height:3px;background:linear-gradient(90deg,var(--team-a),transparent)}
+.team-b .team-stripe{height:3px;background:linear-gradient(90deg,transparent,var(--team-b))}
+.team-header{padding:14px 18px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)}
+.team-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.team-a .team-dot{background:var(--team-a);box-shadow:0 0 8px var(--team-a)}
+.team-b .team-dot{background:var(--team-b);box-shadow:0 0 8px var(--team-b)}
+.team-header input{flex:1;background:transparent;border:1px solid var(--border2);border-radius:var(--radius-sm);padding:8px 14px;color:var(--text);font-size:.95rem;font-weight:700;font-family:inherit;transition:all .2s}
+.team-header input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+
+.roster{padding:10px 16px 16px}
+.pos-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;position:relative}
+.pos-label{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.7rem;flex-shrink:0;letter-spacing:.02em}
+.team-a .pos-label{background:var(--team-a-dim);color:var(--team-a);border:1px solid var(--team-a-med)}
+.team-b .pos-label{background:var(--team-b-dim);color:var(--team-b);border:1px solid var(--team-b-med)}
+.pos-row input{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 12px;font-size:.85rem;color:var(--text);font-family:inherit;transition:all .2s}
+.pos-row input::placeholder{color:var(--muted)}
+.pos-row input:focus{outline:none;border-color:var(--accent);background:var(--surface);box-shadow:0 0 0 3px var(--accent-glow)}
+
+.ac-list{position:absolute;top:calc(100% + 4px);left:42px;right:0;background:var(--card);border:1px solid var(--border2);border-radius:var(--radius-sm);box-shadow:var(--shadow-lg);z-index:100;max-height:220px;overflow-y:auto;display:none}
+.ac-list.show{display:block}
+.ac-list::-webkit-scrollbar{width:4px}
+.ac-list::-webkit-scrollbar-thumb{background:var(--surface2);border-radius:4px}
+.ac-item{padding:9px 14px;cursor:pointer;font-size:.82rem;display:flex;justify-content:space-between;align-items:center;transition:background .1s;border-bottom:1px solid var(--border)}
+.ac-item:last-child{border-bottom:none}
+.ac-item:hover,.ac-item.active{background:var(--surface)}
+.ac-item .ac-name{font-weight:600}
+.ac-item .ac-meta{display:flex;align-items:center;gap:6px}
+.ac-item .ac-pos{color:var(--muted);font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.ac-item .ac-ovr{background:var(--accent);color:#fff;font-size:.68rem;padding:2px 7px;border-radius:5px;font-weight:800}
+.ac-item .ac-stats{font-size:.65rem;color:var(--text2);margin-left:2px}
+
+.vs-col{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding-top:70px}
+.vs-badge{width:56px;height:56px;border-radius:50%;background:var(--surface);border:2px solid var(--border2);display:flex;align-items:center;justify-content:center;color:var(--text2);font-weight:900;font-size:.85rem;position:relative}
+.vs-badge::before{content:'';position:absolute;inset:-4px;border-radius:50%;background:conic-gradient(var(--team-a),var(--accent),var(--team-b),var(--accent),var(--team-a));opacity:.3;z-index:-1;filter:blur(1px)}
+.sim-btn{background:linear-gradient(135deg,var(--accent),#8b5cf6);color:#fff;border:none;border-radius:var(--radius-sm);padding:12px 32px;font-size:.9rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s;box-shadow:0 4px 20px var(--accent-glow);letter-spacing:.01em}
+.sim-btn:hover{transform:translateY(-2px);box-shadow:0 8px 30px var(--accent-glow);filter:brightness(1.1)}
+.sim-btn:active{transform:translateY(0)}
+
+.results-panel{max-width:1120px;margin:28px auto 0;display:none}
+.results-panel.show{display:block}
+.panel{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;margin-bottom:16px}
+.panel-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.panel-header h2{font-size:1.05rem;font-weight:700}
+.panel-badge{font-size:.7rem;font-weight:700;padding:3px 10px;border-radius:6px;text-transform:uppercase;letter-spacing:.05em}
+.panel-body{padding:20px}
+
+.win-prob{margin-bottom:24px}
+.win-prob-labels{display:flex;justify-content:space-between;margin-bottom:8px;font-size:.82rem;font-weight:700}
+.win-prob-labels .team-a-label{color:var(--team-a)}
+.win-prob-labels .team-b-label{color:var(--team-b)}
+.win-bar{height:36px;border-radius:10px;overflow:hidden;display:flex;background:var(--surface)}
+.win-bar .bar-a{background:linear-gradient(90deg,var(--team-a),rgba(231,76,60,.7));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:.8rem;transition:width .8s cubic-bezier(.4,0,.2,1);text-shadow:0 1px 3px rgba(0,0,0,.4)}
+.win-bar .bar-b{background:linear-gradient(90deg,rgba(52,152,219,.7),var(--team-b));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:.8rem;transition:width .8s cubic-bezier(.4,0,.2,1);text-shadow:0 1px 3px rgba(0,0,0,.4)}
+
+.analysis-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+@media(max-width:700px){.analysis-grid{grid-template-columns:1fr}}
+.analysis-card{background:var(--bg2);border-radius:var(--radius-sm);padding:16px 18px;border:1px solid var(--border)}
+.analysis-card h3{font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:10px;font-weight:700}
+.analysis-card p{font-size:.85rem;color:var(--text2);line-height:1.65}
+.analysis-card .hl{color:var(--text);font-weight:600}
+.analysis-card .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;margin-top:8px}
+.analysis-card .sg-row{display:flex;justify-content:space-between;font-size:.78rem;padding:3px 0;border-bottom:1px solid var(--border)}
+.analysis-card .sg-row:last-child{border-bottom:none}
+.sg-label{color:var(--muted);font-weight:600}
+.sg-val-a{color:var(--team-a);font-weight:700}
+.sg-val-b{color:var(--team-b);font-weight:700}
+.sg-val-win{text-decoration:underline;text-underline-offset:2px}
+
+.matchup-table{width:100%;border-collapse:separate;border-spacing:0;font-size:.83rem;margin-bottom:20px}
+.matchup-table th{padding:10px 14px;text-align:left;border-bottom:1px solid var(--border2);font-weight:700;color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.06em}
+.matchup-table td{padding:12px 14px;border-bottom:1px solid var(--border);vertical-align:top}
+.matchup-table tr:last-child td{border-bottom:none}
+.matchup-table tr:hover td{background:var(--bg2)}
+.player-cell{display:flex;flex-direction:column;gap:2px}
+.player-name{font-weight:600;font-size:.85rem}
+.player-stats{font-size:.7rem;color:var(--accent2);font-weight:600;letter-spacing:.01em}
+.player-detail{font-size:.7rem;color:var(--muted)}
+.winner-badge{display:inline-block;padding:3px 10px;border-radius:6px;font-weight:700;font-size:.72rem;letter-spacing:.02em}
+.winner-a{background:var(--team-a-dim);color:var(--team-a)}
+.winner-b{background:var(--team-b-dim);color:var(--team-b)}
+.winner-tie{background:var(--surface);color:var(--muted)}
+.matchup-note{font-size:.73rem;color:var(--text2);margin-top:4px;font-style:italic;line-height:1.4}
+
+.verdict{background:linear-gradient(135deg,var(--surface),var(--card));border-radius:var(--radius-sm);padding:20px 22px;border:1px solid var(--border2)}
+.verdict h3{font-size:.9rem;font-weight:700;margin-bottom:10px;color:var(--accent2)}
+.verdict p{font-size:.87rem;color:var(--text2);line-height:1.7}
+.verdict strong{color:var(--text)}
+
+.scorecard{max-width:1120px;margin:24px auto 0}
+.score-summary{display:flex;justify-content:center;align-items:center;gap:28px;margin-bottom:20px;padding:8px 0}
+.score-block{text-align:center}
+.score-num{font-size:2.4rem;font-weight:900;line-height:1}
+.score-label{font-size:.72rem;color:var(--muted);margin-top:6px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.score-vs{font-size:1rem;color:var(--muted);font-weight:800;opacity:.4}
+
+.history{max-height:none}
+.history-item{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:8px;overflow:hidden;transition:all .2s;cursor:pointer}
+.history-item:hover{border-color:var(--border2);background:var(--surface)}
+.history-summary{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;gap:12px}
+.history-left{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
+.history-indicator{width:4px;height:28px;border-radius:2px;flex-shrink:0}
+.history-indicator.win-a{background:var(--team-a)}
+.history-indicator.win-b{background:var(--team-b)}
+.history-teams{font-weight:600;font-size:.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.history-score{font-size:.8rem;color:var(--text2);font-weight:600;white-space:nowrap}
+.history-actions{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.history-time{font-size:.72rem;color:var(--muted);font-weight:500}
+.expand-btn{background:none;border:none;color:var(--muted);cursor:pointer;padding:4px;transition:transform .2s,color .15s;font-size:.9rem}
+.expand-btn:hover{color:var(--text)}
+.expand-btn.open{transform:rotate(180deg)}
+.delete-btn{background:none;border:1px solid transparent;border-radius:6px;color:var(--muted);cursor:pointer;padding:3px 8px;font-size:.72rem;font-family:inherit;font-weight:600;transition:all .15s}
+.delete-btn:hover{color:var(--red);border-color:rgba(231,76,60,.3);background:rgba(231,76,60,.08)}
+
+.history-detail{display:none;padding:0 16px 16px;border-top:1px solid var(--border)}
+.history-detail.show{display:block}
+.detail-win-bar{margin:12px 0}
+.detail-section{margin-top:14px}
+.detail-section h4{font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px;font-weight:700}
+.detail-section p{font-size:.83rem;color:var(--text2);line-height:1.6}
+.detail-matchups{width:100%;border-collapse:collapse;font-size:.8rem;margin-top:6px}
+.detail-matchups td{padding:6px 10px;border-bottom:1px solid var(--border)}
+.detail-matchups tr:last-child td{border-bottom:none}
+
+.empty-history{text-align:center;color:var(--muted);font-size:.85rem;padding:32px 0;font-weight:500}
+.btn-ghost{background:none;border:1px solid var(--border2);border-radius:8px;padding:6px 14px;font-size:.78rem;color:var(--muted);cursor:pointer;font-family:inherit;font-weight:600;transition:all .15s}
+.btn-ghost:hover{border-color:var(--red);color:var(--red);background:rgba(231,76,60,.06)}
+
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--surface2);border-radius:4px}
+
+.traj-badge{display:inline-block;padding:1px 6px;border-radius:4px;font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-left:4px}
+.traj-ascending{background:rgba(46,204,113,.15);color:#2ecc71}
+.traj-peak{background:rgba(241,196,15,.15);color:#f1c40f}
+.traj-stable{background:rgba(149,165,166,.15);color:#95a5a6}
+.traj-declining{background:rgba(231,76,60,.12);color:#e07060}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Starting 5 Simulator</h1>
+  <p>Build two NBA lineups. Simulate the matchup. Study the breakdown.</p>
+</div>
+
+<div class="arena">
+  <div class="team-card team-a">
+    <div class="team-stripe"></div>
+    <div class="team-header"><div class="team-dot"></div><input type="text" id="teamAName" value="Miami Heat" spellcheck="false"></div>
+    <div class="roster" id="rosterA"></div>
+  </div>
+  <div class="vs-col">
+    <div class="vs-badge">VS</div>
+    <button class="sim-btn" onclick="simulate()">Simulate</button>
+  </div>
+  <div class="team-card team-b">
+    <div class="team-stripe"></div>
+    <div class="team-header"><div class="team-dot"></div><input type="text" id="teamBName" value="New York Knicks" spellcheck="false"></div>
+    <div class="roster" id="rosterB"></div>
+  </div>
+</div>
+
+<div class="results-panel" id="resultsPanel">
+  <div class="panel">
+    <div class="panel-header">
+      <h2 id="resultsTitle">Simulation Results</h2>
+      <span class="panel-badge" style="background:var(--accent-glow);color:var(--accent2)">LATEST</span>
+    </div>
+    <div class="panel-body">
+      <div class="win-prob">
+        <div class="win-prob-labels"><span class="team-a-label" id="barLabelA"></span><span class="team-b-label" id="barLabelB"></span></div>
+        <div class="win-bar"><div class="bar-a" id="barA"></div><div class="bar-b" id="barB"></div></div>
+      </div>
+      <div class="analysis-grid" id="analysisGrid"></div>
+      <table class="matchup-table">
+        <thead><tr><th>Pos</th><th id="colA">Team A</th><th>Edge</th><th id="colB">Team B</th><th>Breakdown</th></tr></thead>
+        <tbody id="matchupBody"></tbody>
+      </table>
+      <div class="verdict" id="verdict"></div>
+    </div>
+  </div>
+</div>
+
+<div class="scorecard panel" id="scorecardPanel">
+  <div class="panel-header">
+    <h2>All-Time Series</h2>
+    <button class="btn-ghost" onclick="resetScorecard()">Reset All</button>
+  </div>
+  <div class="panel-body">
+    <div class="score-summary">
+      <div class="score-block"><div class="score-num" id="winsA" style="color:var(--team-a)">0</div><div class="score-label" id="winsALabel">Wins</div></div>
+      <div class="score-vs">vs</div>
+      <div class="score-block"><div class="score-num" id="winsB" style="color:var(--team-b)">0</div><div class="score-label" id="winsBLabel">Wins</div></div>
+    </div>
+    <div class="history" id="history"><div class="empty-history">No simulations yet — run your first matchup.</div></div>
+  </div>
+</div>
+
+<script>
+// Player database with recent 3-year stats (2022-2025 averages)
+// Fields: ppg, rpg, apg, spg, bpg, fgPct, threePct, tsPct, per, bpm, trajectory
+const PLAYERS = [
+  // ── PGs ──
+  {name:"Shai Gilgeous-Alexander",pos:"PG",ovr:97,scoring:97,playmaking:88,defense:85,shooting:86,rebounding:55,iq:92,
+   stats:{ppg:31.4,rpg:5.5,apg:6.2,spg:1.8,bpg:0.9,fgPct:.541,threePct:.353,tsPct:.618,per:31.2,bpm:10.8,trajectory:"ascending"},
+   accolades:"MVP, Scoring Champ x2, All-NBA 1st x3",style:"iso",scheme:"motion-iso hybrid",strengths:["midrange creation","free-throw drawing","perimeter D"]},
+  {name:"Luka Doncic",pos:"PG",ovr:96,scoring:96,playmaking:97,defense:72,shooting:84,rebounding:80,iq:95,
+   stats:{ppg:33.2,rpg:9.1,apg:9.5,spg:1.4,bpg:0.5,fgPct:.487,threePct:.360,tsPct:.600,per:28.5,bpm:8.4,trajectory:"peak"},
+   accolades:"All-NBA 1st x4, ROY",style:"orchestrator",scheme:"high pick-and-roll",strengths:["step-back 3","court vision","triple-double threat"]},
+  {name:"Stephen Curry",pos:"PG",ovr:93,scoring:92,playmaking:90,defense:74,shooting:99,rebounding:48,iq:97,
+   stats:{ppg:26.4,rpg:4.5,apg:6.1,spg:0.9,bpg:0.4,fgPct:.468,threePct:.408,tsPct:.630,per:23.8,bpm:5.6,trajectory:"declining"},
+   accolades:"2x MVP, 4x Champ, All-Time 3PT Leader",style:"off-ball movement",scheme:"motion offense",strengths:["gravity","off-screen shooting","handles"]},
+  {name:"Damian Lillard",pos:"PG",ovr:89,scoring:90,playmaking:88,defense:70,shooting:92,rebounding:44,iq:88,
+   stats:{ppg:25.3,rpg:4.4,apg:7.0,spg:0.9,bpg:0.3,fgPct:.444,threePct:.365,tsPct:.598,per:21.8,bpm:4.2,trajectory:"declining"},
+   accolades:"7x All-Star, All-NBA 1st x1",style:"pull-up shooter",scheme:"high PnR",strengths:["deep 3s","clutch scoring","pick-and-roll"]},
+  {name:"Jalen Brunson",pos:"PG",ovr:90,scoring:89,playmaking:87,defense:75,shooting:85,rebounding:42,iq:91,
+   stats:{ppg:28.7,rpg:3.5,apg:6.8,spg:0.9,bpg:0.2,fgPct:.479,threePct:.383,tsPct:.589,per:24.1,bpm:6.1,trajectory:"ascending"},
+   accolades:"3x All-Star, All-NBA 2nd",style:"midrange maestro",scheme:"iso/PnR hybrid",strengths:["footwork","midrange","tough shot-making"]},
+  {name:"Tyrese Haliburton",pos:"PG",ovr:87,scoring:80,playmaking:92,defense:74,shooting:86,rebounding:45,iq:90,
+   stats:{ppg:20.1,rpg:3.9,apg:10.4,spg:1.3,bpg:0.5,fgPct:.468,threePct:.376,tsPct:.610,per:20.2,bpm:4.8,trajectory:"peak"},
+   accolades:"2x All-Star, Assist Leader",style:"pass-first floor general",scheme:"pace-and-space",strengths:["transition passing","3pt shooting","pace"]},
+  {name:"De'Aaron Fox",pos:"PG",ovr:88,scoring:88,playmaking:85,defense:78,shooting:78,rebounding:46,iq:85,
+   stats:{ppg:26.6,rpg:4.6,apg:5.6,spg:1.5,bpg:0.4,fgPct:.468,threePct:.337,tsPct:.573,per:22.0,bpm:4.5,trajectory:"peak"},
+   accolades:"2x All-Star",style:"speed demon",scheme:"fast break",strengths:["transition speed","finishing at rim","on-ball D"]},
+  {name:"Trae Young",pos:"PG",ovr:87,scoring:87,playmaking:94,defense:62,shooting:88,rebounding:38,iq:89,
+   stats:{ppg:26.2,rpg:3.0,apg:10.8,spg:1.1,bpg:0.1,fgPct:.432,threePct:.349,tsPct:.579,per:21.6,bpm:4.0,trajectory:"stable"},
+   accolades:"3x All-Star, Assist Leader",style:"deep-range playmaker",scheme:"high PnR / lob offense",strengths:["30-ft range","lob passing","floater"]},
+  {name:"Donovan Mitchell",pos:"SG",ovr:89,scoring:91,playmaking:82,defense:74,shooting:86,rebounding:48,iq:86,
+   stats:{ppg:26.8,rpg:4.6,apg:5.1,spg:1.5,bpg:0.3,fgPct:.463,threePct:.371,tsPct:.586,per:22.4,bpm:4.1,trajectory:"peak"},
+   accolades:"4x All-Star",style:"explosive scorer",scheme:"iso-heavy",strengths:["downhill attacking","clutch shots","playoff performer"]},
+  {name:"Ja Morant",pos:"PG",ovr:88,scoring:90,playmaking:86,defense:72,shooting:76,rebounding:52,iq:84,
+   stats:{ppg:25.1,rpg:5.6,apg:8.1,spg:1.1,bpg:0.3,fgPct:.469,threePct:.310,tsPct:.558,per:21.8,bpm:4.7,trajectory:"stable"},
+   accolades:"2x All-Star, MIP",style:"athletic slasher",scheme:"fast break / PnR",strengths:["above-rim finishing","court vision","transition"]},
+  {name:"Kyrie Irving",pos:"PG",ovr:87,scoring:89,playmaking:85,defense:72,shooting:88,rebounding:44,iq:88,
+   stats:{ppg:24.2,rpg:4.8,apg:5.2,spg:1.0,bpg:0.4,fgPct:.487,threePct:.393,tsPct:.601,per:21.0,bpm:3.5,trajectory:"declining"},
+   accolades:"NBA Champ, 8x All-Star",style:"elite ball-handler",scheme:"iso/motion",strengths:["finishing","handle","clutch scoring"]},
+  {name:"Tyrese Maxey",pos:"PG",ovr:87,scoring:87,playmaking:82,defense:76,shooting:86,rebounding:40,iq:85,
+   stats:{ppg:25.9,rpg:3.7,apg:6.2,spg:1.0,bpg:0.3,fgPct:.451,threePct:.371,tsPct:.580,per:20.8,bpm:3.6,trajectory:"ascending"},
+   accolades:"All-Star, MIP",style:"speedster scorer",scheme:"PnR / transition",strengths:["speed","catch-and-shoot","off-ball movement"]},
+  {name:"Cade Cunningham",pos:"PG",ovr:87,scoring:85,playmaking:86,defense:76,shooting:82,rebounding:55,iq:88,
+   stats:{ppg:24.3,rpg:6.2,apg:9.3,spg:1.2,bpg:0.3,fgPct:.441,threePct:.352,tsPct:.565,per:21.2,bpm:5.2,trajectory:"ascending"},
+   accolades:"All-Star, ROY",style:"versatile point forward",scheme:"position-less offense",strengths:["size at PG","playmaking","shot creation"]},
+  {name:"LaMelo Ball",pos:"PG",ovr:85,scoring:83,playmaking:89,defense:68,shooting:84,rebounding:58,iq:86,
+   stats:{ppg:23.0,rpg:5.4,apg:8.0,spg:1.5,bpg:0.3,fgPct:.428,threePct:.345,tsPct:.558,per:18.6,bpm:3.0,trajectory:"stable"},
+   accolades:"All-Star, ROY",style:"flashy playmaker",scheme:"up-tempo",strengths:["showtime passing","pull-up 3s","transition"]},
+  {name:"Darius Garland",pos:"PG",ovr:84,scoring:82,playmaking:87,defense:68,shooting:86,rebounding:36,iq:85,
+   stats:{ppg:21.0,rpg:2.7,apg:7.8,spg:1.2,bpg:0.1,fgPct:.454,threePct:.375,tsPct:.586,per:18.4,bpm:2.5,trajectory:"stable"},
+   accolades:"All-Star",style:"shifty PnR operator",scheme:"pick-and-roll",strengths:["PnR navigation","floater","passing"]},
+  {name:"Jrue Holiday",pos:"PG",ovr:86,scoring:78,playmaking:82,defense:90,shooting:82,rebounding:52,iq:92,
+   stats:{ppg:14.0,rpg:5.4,apg:5.2,spg:1.1,bpg:0.5,fgPct:.476,threePct:.382,tsPct:.592,per:16.2,bpm:3.0,trajectory:"declining"},
+   accolades:"2x NBA Champ, All-Defensive 1st x2",style:"two-way anchor",scheme:"switch-everything D",strengths:["perimeter D","smart cuts","playoff poise"]},
+  {name:"Jamal Murray",pos:"PG",ovr:86,scoring:86,playmaking:82,defense:72,shooting:84,rebounding:44,iq:88,
+   stats:{ppg:21.2,rpg:4.0,apg:6.5,spg:1.0,bpg:0.3,fgPct:.457,threePct:.358,tsPct:.577,per:18.5,bpm:2.8,trajectory:"stable"},
+   accolades:"NBA Champ",style:"clutch playoff scorer",scheme:"PnR with Jokic",strengths:["playoff gear","midrange","PnR chemistry"]},
+  {name:"Fred VanVleet",pos:"PG",ovr:83,scoring:78,playmaking:82,defense:78,shooting:84,rebounding:40,iq:86,
+   stats:{ppg:17.4,rpg:3.6,apg:6.2,spg:1.3,bpg:0.3,fgPct:.413,threePct:.365,tsPct:.557,per:15.8,bpm:2.0,trajectory:"declining"},
+   accolades:"NBA Champ, All-Star",style:"gritty two-way guard",scheme:"switch defense",strengths:["3pt shooting","on-ball D","leadership"]},
+  {name:"Dejounte Murray",pos:"PG",ovr:84,scoring:80,playmaking:82,defense:84,shooting:76,rebounding:58,iq:84,
+   stats:{ppg:20.5,rpg:5.4,apg:6.1,spg:1.5,bpg:0.4,fgPct:.449,threePct:.338,tsPct:.539,per:17.2,bpm:2.2,trajectory:"stable"},
+   accolades:"All-Star, All-Defensive",style:"long two-way PG",scheme:"defensive versatility",strengths:["steals","rebounding for PG","length"]},
+  {name:"Immanuel Quickley",pos:"PG",ovr:81,scoring:78,playmaking:78,defense:72,shooting:82,rebounding:42,iq:80,
+   stats:{ppg:16.8,rpg:4.2,apg:6.0,spg:0.9,bpg:0.2,fgPct:.422,threePct:.350,tsPct:.546,per:14.5,bpm:0.8,trajectory:"ascending"},
+   accolades:"--",style:"microwave scorer",scheme:"bench spark",strengths:["instant offense","pull-up 3s","energy"]},
+  {name:"Terry Rozier",pos:"PG",ovr:81,scoring:80,playmaking:74,defense:72,shooting:82,rebounding:44,iq:78,
+   stats:{ppg:18.5,rpg:4.2,apg:4.8,spg:1.0,bpg:0.3,fgPct:.432,threePct:.358,tsPct:.545,per:15.0,bpm:0.5,trajectory:"declining"},
+   accolades:"--",style:"shot-ready combo guard",scheme:"iso scorer",strengths:["contested 3s","transition","scoring bursts"]},
+
+  // ── SGs / Wings ──
+  {name:"Devin Booker",pos:"SG",ovr:90,scoring:93,playmaking:84,defense:74,shooting:90,rebounding:46,iq:88,
+   stats:{ppg:27.1,rpg:4.5,apg:6.6,spg:1.0,bpg:0.3,fgPct:.493,threePct:.368,tsPct:.604,per:23.2,bpm:4.8,trajectory:"peak"},
+   accolades:"4x All-Star, All-NBA 1st, Finals appearance",style:"mid-range assassin",scheme:"off-ball / iso flex",strengths:["pull-up midrange","shot creation","footwork"]},
+  {name:"Anthony Edwards",pos:"SG",ovr:92,scoring:93,playmaking:80,defense:80,shooting:84,rebounding:56,iq:86,
+   stats:{ppg:27.6,rpg:5.8,apg:5.1,spg:1.5,bpg:0.6,fgPct:.468,threePct:.365,tsPct:.582,per:23.5,bpm:5.8,trajectory:"ascending"},
+   accolades:"3x All-Star, All-NBA",style:"explosive two-way wing",scheme:"iso / transition",strengths:["athleticism","power drives","improving D"]},
+  {name:"Jaylen Brown",pos:"SG",ovr:89,scoring:88,playmaking:76,defense:82,shooting:82,rebounding:60,iq:84,
+   stats:{ppg:24.2,rpg:5.7,apg:3.8,spg:1.2,bpg:0.4,fgPct:.488,threePct:.352,tsPct:.577,per:20.6,bpm:3.8,trajectory:"peak"},
+   accolades:"NBA Champ, Finals MVP, 3x All-Star",style:"power wing",scheme:"switching defense",strengths:["finishing","two-way play","transition"]},
+  {name:"Klay Thompson",pos:"SG",ovr:80,scoring:80,playmaking:65,defense:74,shooting:90,rebounding:42,iq:84,
+   stats:{ppg:17.2,rpg:3.3,apg:2.3,spg:0.6,bpg:0.4,fgPct:.432,threePct:.385,tsPct:.564,per:13.8,bpm:-0.2,trajectory:"declining"},
+   accolades:"4x NBA Champ, 6x All-Star",style:"catch-and-shoot specialist",scheme:"motion offense",strengths:["spot-up 3s","off-screen","hot streaks"]},
+  {name:"Bradley Beal",pos:"SG",ovr:81,scoring:84,playmaking:78,defense:68,shooting:86,rebounding:44,iq:82,
+   stats:{ppg:18.2,rpg:4.1,apg:5.0,spg:1.0,bpg:0.4,fgPct:.462,threePct:.352,tsPct:.569,per:16.0,bpm:0.6,trajectory:"declining"},
+   accolades:"3x All-Star, 30ppg season",style:"volume scorer",scheme:"iso / PnR",strengths:["shot creation","midrange","scoring load"]},
+  {name:"Zach LaVine",pos:"SG",ovr:82,scoring:87,playmaking:76,defense:66,shooting:86,rebounding:50,iq:80,
+   stats:{ppg:22.8,rpg:4.5,apg:4.2,spg:0.8,bpg:0.3,fgPct:.475,threePct:.378,tsPct:.598,per:19.5,bpm:1.8,trajectory:"declining"},
+   accolades:"2x All-Star, Dunk Champ",style:"athletic scorer",scheme:"iso / pick-and-pop",strengths:["above-rim finishing","3pt shooting","explosive athleticism"]},
+  {name:"DeMar DeRozan",pos:"SG",ovr:84,scoring:88,playmaking:80,defense:72,shooting:78,rebounding:50,iq:88,
+   stats:{ppg:24.0,rpg:4.3,apg:5.3,spg:1.1,bpg:0.3,fgPct:.480,threePct:.334,tsPct:.575,per:21.5,bpm:3.2,trajectory:"declining"},
+   accolades:"6x All-Star, All-NBA",style:"midrange craftsman",scheme:"iso / post-up guard",strengths:["footwork","clutch gene","drawing fouls"]},
+  {name:"Jalen Green",pos:"SG",ovr:82,scoring:85,playmaking:72,defense:68,shooting:84,rebounding:42,iq:78,
+   stats:{ppg:22.1,rpg:3.8,apg:3.5,spg:0.7,bpg:0.2,fgPct:.435,threePct:.350,tsPct:.557,per:16.2,bpm:0.4,trajectory:"ascending"},
+   accolades:"--",style:"explosive leaper",scheme:"transition / iso",strengths:["vertical pop","3pt shooting","highlight dunks"]},
+  {name:"Derrick White",pos:"SG",ovr:84,scoring:76,playmaking:78,defense:86,shooting:84,rebounding:46,iq:88,
+   stats:{ppg:15.8,rpg:4.2,apg:5.0,spg:0.9,bpg:1.0,fgPct:.453,threePct:.380,tsPct:.592,per:17.2,bpm:3.5,trajectory:"ascending"},
+   accolades:"NBA Champ",style:"smart two-way guard",scheme:"switch-everything D",strengths:["shot-blocking guard","3-and-D","IQ plays"]},
+  {name:"Tyler Herro",pos:"SG",ovr:84,scoring:84,playmaking:78,defense:68,shooting:88,rebounding:46,iq:82,
+   stats:{ppg:23.0,rpg:5.2,apg:5.0,spg:0.8,bpg:0.2,fgPct:.456,threePct:.382,tsPct:.598,per:19.0,bpm:2.4,trajectory:"ascending"},
+   accolades:"6MOY",style:"bucket-getter off bench",scheme:"PnR / off-screen",strengths:["shot creation","pull-up 3s","confident shooter"]},
+  {name:"Anfernee Simons",pos:"SG",ovr:83,scoring:84,playmaking:76,defense:66,shooting:88,rebounding:38,iq:80,
+   stats:{ppg:22.6,rpg:2.9,apg:4.5,spg:0.7,bpg:0.3,fgPct:.438,threePct:.375,tsPct:.587,per:17.2,bpm:1.2,trajectory:"stable"},
+   accolades:"--",style:"flamethrower",scheme:"PnR / catch-and-shoot",strengths:["deep 3s","pull-up shooting","scoring bursts"]},
+  {name:"Desmond Bane",pos:"SG",ovr:83,scoring:82,playmaking:74,defense:76,shooting:86,rebounding:48,iq:82,
+   stats:{ppg:22.4,rpg:4.8,apg:4.2,spg:1.0,bpg:0.3,fgPct:.464,threePct:.380,tsPct:.588,per:18.0,bpm:2.0,trajectory:"peak"},
+   accolades:"--",style:"3-and-D plus shot creation",scheme:"motion / PnR",strengths:["corner 3s","smart cuts","solid D"]},
+  {name:"Austin Reaves",pos:"SG",ovr:83,scoring:80,playmaking:80,defense:76,shooting:82,rebounding:48,iq:86,
+   stats:{ppg:18.8,rpg:4.6,apg:5.5,spg:1.0,bpg:0.3,fgPct:.466,threePct:.370,tsPct:.580,per:16.5,bpm:2.5,trajectory:"ascending"},
+   accolades:"--",style:"crafty playmaking guard",scheme:"motion / secondary creator",strengths:["floater","playmaking","clutch plays"]},
+  {name:"Cam Thomas",pos:"SG",ovr:84,scoring:90,playmaking:72,defense:68,shooting:86,rebounding:40,iq:80,
+   stats:{ppg:24.7,rpg:3.4,apg:4.0,spg:0.8,bpg:0.2,fgPct:.432,threePct:.351,tsPct:.558,per:18.4,bpm:1.5,trajectory:"ascending"},
+   accolades:"--",style:"pure bucket-getter",scheme:"iso-heavy",strengths:["shot creation","microwave scoring","contested makes"]},
+  {name:"CJ McCollum",pos:"SG",ovr:81,scoring:82,playmaking:76,defense:68,shooting:84,rebounding:40,iq:82,
+   stats:{ppg:20.2,rpg:3.8,apg:4.5,spg:0.9,bpg:0.2,fgPct:.449,threePct:.372,tsPct:.568,per:16.5,bpm:0.8,trajectory:"declining"},
+   accolades:"MIP",style:"crafty mid-range scorer",scheme:"PnR / iso",strengths:["pull-up shooting","footwork","veteran savvy"]},
+  {name:"RJ Barrett",pos:"SG",ovr:82,scoring:80,playmaking:74,defense:74,shooting:76,rebounding:56,iq:78,
+   stats:{ppg:20.2,rpg:5.8,apg:4.1,spg:0.8,bpg:0.3,fgPct:.455,threePct:.340,tsPct:.551,per:15.5,bpm:0.5,trajectory:"ascending"},
+   accolades:"--",style:"strong slasher",scheme:"drive-and-kick",strengths:["finishing through contact","physicality","improving shooting"]},
+  {name:"Coby White",pos:"SG",ovr:82,scoring:82,playmaking:76,defense:70,shooting:84,rebounding:42,iq:80,
+   stats:{ppg:19.1,rpg:3.8,apg:5.2,spg:0.7,bpg:0.2,fgPct:.443,threePct:.368,tsPct:.570,per:16.0,bpm:1.2,trajectory:"ascending"},
+   accolades:"--",style:"scoring combo guard",scheme:"PnR / transition",strengths:["3pt shooting","speed","scoring bursts"]},
+  {name:"Dyson Daniels",pos:"SG",ovr:82,scoring:72,playmaking:74,defense:90,shooting:72,rebounding:52,iq:82,
+   stats:{ppg:13.8,rpg:4.6,apg:3.8,spg:3.2,bpg:0.6,fgPct:.462,threePct:.312,tsPct:.552,per:16.8,bpm:3.6,trajectory:"ascending"},
+   accolades:"Steals Leader",style:"elite perimeter defender",scheme:"switch-everything D",strengths:["steals","on-ball D","length"]},
+
+  // ── SFs ──
+  {name:"LeBron James",pos:"SF",ovr:92,scoring:90,playmaking:94,defense:78,shooting:80,rebounding:76,iq:99,
+   stats:{ppg:25.7,rpg:7.3,apg:8.3,spg:1.0,bpg:0.5,fgPct:.533,threePct:.367,tsPct:.610,per:25.8,bpm:7.2,trajectory:"declining"},
+   accolades:"4x MVP, 4x Champ, 4x Finals MVP, All-Time Scoring Leader",style:"point forward",scheme:"positionless offense",strengths:["court vision","transition","basketball IQ"]},
+  {name:"Kevin Durant",pos:"SF",ovr:93,scoring:95,playmaking:82,defense:78,shooting:92,rebounding:68,iq:92,
+   stats:{ppg:27.2,rpg:6.7,apg:5.0,spg:0.8,bpg:1.2,fgPct:.523,threePct:.399,tsPct:.631,per:25.2,bpm:5.8,trajectory:"declining"},
+   accolades:"MVP, 2x Champ, 2x Finals MVP, 4x Scoring Champ",style:"unguardable iso scorer",scheme:"iso / midrange",strengths:["length","midrange pull-up","shot versatility"]},
+  {name:"Jayson Tatum",pos:"SF",ovr:93,scoring:92,playmaking:82,defense:82,shooting:88,rebounding:72,iq:90,
+   stats:{ppg:27.0,rpg:8.1,apg:4.6,spg:1.0,bpg:0.6,fgPct:.466,threePct:.369,tsPct:.589,per:24.0,bpm:6.5,trajectory:"peak"},
+   accolades:"NBA Champ, 5x All-Star, All-NBA 1st x3",style:"two-way shot creator",scheme:"iso / motion",strengths:["step-back","two-way impact","big-game scorer"]},
+  {name:"Kawhi Leonard",pos:"SF",ovr:90,scoring:90,playmaking:78,defense:92,shooting:86,rebounding:64,iq:92,
+   stats:{ppg:23.8,rpg:6.5,apg:3.6,spg:1.6,bpg:0.8,fgPct:.500,threePct:.380,tsPct:.610,per:24.5,bpm:6.0,trajectory:"declining"},
+   accolades:"2x Champ, 2x Finals MVP, 2x DPOY",style:"lockdown two-way",scheme:"iso / switch D",strengths:["claw defense","iso scoring","playoff Kawhi"]},
+  {name:"Paul George",pos:"SF",ovr:85,scoring:84,playmaking:78,defense:84,shooting:86,rebounding:60,iq:86,
+   stats:{ppg:22.0,rpg:5.2,apg:3.5,spg:1.4,bpg:0.4,fgPct:.448,threePct:.370,tsPct:.578,per:18.8,bpm:2.5,trajectory:"declining"},
+   accolades:"9x All-Star, All-NBA",style:"versatile 3-and-D wing",scheme:"motion / switch",strengths:["3pt shooting","perimeter D","two-way play"]},
+  {name:"Jimmy Butler",pos:"SF",ovr:86,scoring:84,playmaking:82,defense:86,shooting:74,rebounding:58,iq:90,
+   stats:{ppg:20.8,rpg:5.3,apg:5.0,spg:1.3,bpg:0.3,fgPct:.496,threePct:.302,tsPct:.579,per:21.2,bpm:4.8,trajectory:"declining"},
+   accolades:"6x All-Star, 2x Finals appearance",style:"playoff Jimmy",scheme:"physical defense / iso",strengths:["will to win","drawing fouls","defensive tenacity"]},
+  {name:"Scottie Barnes",pos:"SF",ovr:87,scoring:80,playmaking:82,defense:84,shooting:74,rebounding:72,iq:86,
+   stats:{ppg:19.8,rpg:8.0,apg:6.0,spg:1.2,bpg:0.8,fgPct:.472,threePct:.318,tsPct:.560,per:18.5,bpm:3.8,trajectory:"ascending"},
+   accolades:"ROY, All-Star",style:"do-everything point forward",scheme:"positionless",strengths:["versatility","defense","transition playmaking"]},
+  {name:"Franz Wagner",pos:"SF",ovr:86,scoring:84,playmaking:78,defense:80,shooting:80,rebounding:58,iq:85,
+   stats:{ppg:23.5,rpg:5.6,apg:5.5,spg:1.2,bpg:0.4,fgPct:.472,threePct:.348,tsPct:.574,per:19.2,bpm:3.2,trajectory:"ascending"},
+   accolades:"All-Star",style:"smooth two-way wing",scheme:"motion / PnR",strengths:["euro-step","shot creation","defensive IQ"]},
+  {name:"OG Anunoby",pos:"SF",ovr:85,scoring:78,playmaking:68,defense:92,shooting:80,rebounding:58,iq:84,
+   stats:{ppg:14.7,rpg:4.8,apg:1.5,spg:1.5,bpg:0.7,fgPct:.481,threePct:.373,tsPct:.595,per:15.5,bpm:2.0,trajectory:"stable"},
+   accolades:"All-Defensive",style:"3-and-D lockdown",scheme:"switch-everything D",strengths:["perimeter clamp","corner 3s","positional versatility"]},
+  {name:"Mikal Bridges",pos:"SF",ovr:83,scoring:78,playmaking:72,defense:86,shooting:82,rebounding:48,iq:85,
+   stats:{ppg:18.5,rpg:4.2,apg:3.0,spg:1.0,bpg:0.5,fgPct:.452,threePct:.364,tsPct:.570,per:14.8,bpm:1.0,trajectory:"stable"},
+   accolades:"Ironman streak",style:"3-and-D connector",scheme:"switch defense",strengths:["durability","wing defense","efficient scoring"]},
+  {name:"Brandon Ingram",pos:"SF",ovr:84,scoring:86,playmaking:78,defense:72,shooting:82,rebounding:56,iq:82,
+   stats:{ppg:23.1,rpg:5.5,apg:5.2,spg:0.7,bpg:0.5,fgPct:.470,threePct:.350,tsPct:.572,per:18.0,bpm:1.8,trajectory:"stable"},
+   accolades:"All-Star, MIP",style:"lengthy shot creator",scheme:"iso / mid-post",strengths:["length","midrange","shot creation at 6'8"]},
+  {name:"Khris Middleton",pos:"SF",ovr:82,scoring:84,playmaking:78,defense:76,shooting:86,rebounding:52,iq:86,
+   stats:{ppg:17.2,rpg:4.4,apg:4.8,spg:0.8,bpg:0.2,fgPct:.456,threePct:.378,tsPct:.582,per:16.2,bpm:1.5,trajectory:"declining"},
+   accolades:"NBA Champ, 3x All-Star",style:"clutch mid-range scorer",scheme:"iso / motion",strengths:["playoff mid-range","footwork","clutch shots"]},
+  {name:"Andrew Wiggins",pos:"SF",ovr:80,scoring:78,playmaking:68,defense:80,shooting:78,rebounding:56,iq:78,
+   stats:{ppg:15.8,rpg:4.5,apg:2.3,spg:0.8,bpg:0.5,fgPct:.452,threePct:.356,tsPct:.558,per:13.2,bpm:-0.5,trajectory:"declining"},
+   accolades:"NBA Champ, All-Star",style:"athletic two-way wing",scheme:"transition / cutting",strengths:["athleticism","wing defense","alley-oop finishing"]},
+  {name:"Jalen Williams",pos:"SF",ovr:87,scoring:84,playmaking:80,defense:82,shooting:80,rebounding:56,iq:86,
+   stats:{ppg:21.0,rpg:5.5,apg:5.0,spg:1.3,bpg:0.6,fgPct:.484,threePct:.358,tsPct:.600,per:20.5,bpm:4.8,trajectory:"ascending"},
+   accolades:"All-Star",style:"versatile Swiss Army knife",scheme:"positionless / motion",strengths:["versatility","two-way play","high IQ"]},
+  {name:"Herb Jones",pos:"SF",ovr:82,scoring:72,playmaking:70,defense:90,shooting:74,rebounding:56,iq:84,
+   stats:{ppg:11.8,rpg:4.0,apg:2.8,spg:1.6,bpg:0.8,fgPct:.480,threePct:.338,tsPct:.568,per:14.0,bpm:2.5,trajectory:"stable"},
+   accolades:"All-Defensive",style:"elite perimeter stopper",scheme:"switch defense",strengths:["on-ball D","passing lanes","team defense"]},
+  {name:"Josh Hart",pos:"SF",ovr:80,scoring:72,playmaking:74,defense:78,shooting:74,rebounding:72,iq:84,
+   stats:{ppg:10.5,rpg:8.2,apg:4.0,spg:0.8,bpg:0.2,fgPct:.448,threePct:.342,tsPct:.548,per:12.8,bpm:1.5,trajectory:"stable"},
+   accolades:"--",style:"hustle engine",scheme:"energy / rebounding guard",strengths:["rebounding","hustle plays","intangibles"]},
+  {name:"Keegan Murray",pos:"SF",ovr:82,scoring:80,playmaking:68,defense:78,shooting:84,rebounding:58,iq:80,
+   stats:{ppg:16.8,rpg:5.0,apg:2.2,spg:0.8,bpg:0.5,fgPct:.462,threePct:.378,tsPct:.582,per:15.0,bpm:0.8,trajectory:"ascending"},
+   accolades:"--",style:"3-and-D forward",scheme:"catch-and-shoot",strengths:["corner 3s","length","quiet efficiency"]},
+  {name:"Jaden McDaniels",pos:"SF",ovr:82,scoring:74,playmaking:68,defense:86,shooting:76,rebounding:56,iq:82,
+   stats:{ppg:12.5,rpg:3.8,apg:2.2,spg:1.0,bpg:0.5,fgPct:.448,threePct:.352,tsPct:.558,per:13.2,bpm:1.2,trajectory:"ascending"},
+   accolades:"--",style:"switchable wing defender",scheme:"switch everything",strengths:["defensive versatility","length","improving offense"]},
+  {name:"Trey Murphy III",pos:"SF",ovr:82,scoring:80,playmaking:68,defense:78,shooting:88,rebounding:52,iq:80,
+   stats:{ppg:17.2,rpg:4.5,apg:2.0,spg:0.8,bpg:0.3,fgPct:.458,threePct:.398,tsPct:.602,per:15.8,bpm:1.5,trajectory:"ascending"},
+   accolades:"--",style:"knockdown 3-and-D wing",scheme:"catch-and-shoot",strengths:["3pt marksmanship","athleticism","cutting"]},
+  {name:"Keldon Johnson",pos:"SF",ovr:79,scoring:78,playmaking:68,defense:74,shooting:76,rebounding:56,iq:76,
+   stats:{ppg:15.2,rpg:4.5,apg:2.8,spg:0.6,bpg:0.2,fgPct:.448,threePct:.342,tsPct:.548,per:12.5,bpm:-0.5,trajectory:"stable"},
+   accolades:"--",style:"physical slasher",scheme:"drive-and-kick",strengths:["physicality","energy","transition"]},
+
+  // ── PFs ──
+  {name:"Giannis Antetokounmpo",pos:"PF",ovr:97,scoring:95,playmaking:84,defense:92,shooting:68,rebounding:92,iq:90,
+   stats:{ppg:31.1,rpg:11.6,apg:5.8,spg:1.1,bpg:1.1,fgPct:.601,threePct:.274,tsPct:.619,per:31.5,bpm:10.5,trajectory:"peak"},
+   accolades:"2x MVP, Champ, Finals MVP, DPOY",style:"freight-train finisher",scheme:"drive-and-kick / transition",strengths:["rim attacks","transition dunks","paint dominance"]},
+  {name:"Anthony Davis",pos:"PF",ovr:93,scoring:88,playmaking:74,defense:94,shooting:76,rebounding:92,iq:90,
+   stats:{ppg:25.8,rpg:12.4,apg:3.5,spg:1.2,bpg:2.3,fgPct:.540,threePct:.282,tsPct:.595,per:28.2,bpm:6.5,trajectory:"peak"},
+   accolades:"NBA Champ, 9x All-Star, 4x All-Defensive 1st",style:"two-way big",scheme:"rim protection / PnR roller",strengths:["shot-blocking","lob threat","midrange"]},
+  {name:"Pascal Siakam",pos:"PF",ovr:86,scoring:84,playmaking:78,defense:80,shooting:78,rebounding:68,iq:84,
+   stats:{ppg:22.2,rpg:7.0,apg:5.2,spg:0.8,bpg:0.5,fgPct:.494,threePct:.325,tsPct:.567,per:19.5,bpm:3.0,trajectory:"stable"},
+   accolades:"NBA Champ, All-Star, MIP",style:"spin-move specialist",scheme:"transition / face-up",strengths:["spin move","transition scoring","defensive versatility"]},
+  {name:"Julius Randle",pos:"PF",ovr:84,scoring:84,playmaking:78,defense:72,shooting:78,rebounding:78,iq:82,
+   stats:{ppg:24.0,rpg:9.2,apg:5.0,spg:0.7,bpg:0.3,fgPct:.458,threePct:.335,tsPct:.558,per:19.2,bpm:2.5,trajectory:"stable"},
+   accolades:"2x All-Star, MIP",style:"bully-ball forward",scheme:"iso / post-up",strengths:["physical post game","triple-double ability","left hand"]},
+  {name:"Domantas Sabonis",pos:"PF",ovr:87,scoring:82,playmaking:86,defense:74,shooting:76,rebounding:90,iq:88,
+   stats:{ppg:19.8,rpg:13.8,apg:7.2,spg:0.8,bpg:0.5,fgPct:.588,threePct:.312,tsPct:.617,per:23.8,bpm:5.5,trajectory:"peak"},
+   accolades:"3x All-Star",style:"passing big man",scheme:"5-out / high-post hub",strengths:["court vision for big","rebounding","touch around rim"]},
+  {name:"Lauri Markkanen",pos:"PF",ovr:87,scoring:86,playmaking:72,defense:74,shooting:88,rebounding:72,iq:84,
+   stats:{ppg:23.2,rpg:8.0,apg:2.0,spg:0.6,bpg:0.5,fgPct:.478,threePct:.388,tsPct:.600,per:20.5,bpm:2.8,trajectory:"peak"},
+   accolades:"All-Star, MIP",style:"stretch-4 scorer",scheme:"pick-and-pop",strengths:["7-footer shooting","face-up game","floor spacing"]},
+  {name:"Jaren Jackson Jr.",pos:"PF",ovr:86,scoring:82,playmaking:68,defense:90,shooting:80,rebounding:66,iq:84,
+   stats:{ppg:22.0,rpg:5.5,apg:2.0,spg:0.8,bpg:3.0,fgPct:.462,threePct:.342,tsPct:.580,per:20.2,bpm:3.5,trajectory:"peak"},
+   accolades:"DPOY, All-Defensive 1st",style:"shot-blocking stretch-4",scheme:"rim protection / pick-and-pop",strengths:["block rate","3pt for big","defensive timing"]},
+  {name:"Zion Williamson",pos:"PF",ovr:86,scoring:90,playmaking:76,defense:74,shooting:66,rebounding:72,iq:80,
+   stats:{ppg:23.0,rpg:6.0,apg:4.8,spg:0.8,bpg:0.5,fgPct:.575,threePct:.278,tsPct:.620,per:22.5,bpm:4.2,trajectory:"stable"},
+   accolades:"All-Star",style:"power dunker",scheme:"downhill attack / PnR roller",strengths:["paint dominance","explosive finishing","strength"]},
+  {name:"Paolo Banchero",pos:"PF",ovr:86,scoring:86,playmaking:78,defense:74,shooting:78,rebounding:66,iq:82,
+   stats:{ppg:23.2,rpg:6.8,apg:5.4,spg:0.8,bpg:0.5,fgPct:.458,threePct:.332,tsPct:.560,per:18.8,bpm:2.5,trajectory:"ascending"},
+   accolades:"ROY",style:"face-up playmaking 4",scheme:"iso / face-up post",strengths:["shot creation","size at 6'10","passing"]},
+  {name:"Evan Mobley",pos:"PF",ovr:86,scoring:78,playmaking:74,defense:90,shooting:76,rebounding:76,iq:86,
+   stats:{ppg:18.2,rpg:9.0,apg:3.2,spg:0.8,bpg:1.5,fgPct:.518,threePct:.332,tsPct:.580,per:19.8,bpm:3.8,trajectory:"ascending"},
+   accolades:"All-Defensive",style:"switchable defensive anchor",scheme:"switch-everything D / perimeter big",strengths:["defensive versatility","rim protection","switch ability"]},
+  {name:"Chet Holmgren",pos:"PF",ovr:85,scoring:80,playmaking:72,defense:88,shooting:82,rebounding:72,iq:84,
+   stats:{ppg:17.0,rpg:7.8,apg:2.5,spg:0.8,bpg:2.5,fgPct:.515,threePct:.358,tsPct:.600,per:20.5,bpm:3.8,trajectory:"ascending"},
+   accolades:"ROY",style:"unicorn shot-blocker",scheme:"rim protection / floor spacing",strengths:["block rate","3pt shooting for 7-footer","length"]},
+  {name:"Karl-Anthony Towns",pos:"PF",ovr:86,scoring:86,playmaking:74,defense:72,shooting:86,rebounding:82,iq:82,
+   stats:{ppg:24.5,rpg:9.8,apg:3.2,spg:0.6,bpg:0.7,fgPct:.500,threePct:.385,tsPct:.610,per:22.5,bpm:3.2,trajectory:"stable"},
+   accolades:"3x All-Star, ROY",style:"stretch-5 scorer",scheme:"pick-and-pop / post-up",strengths:["3pt shooting big","offensive versatility","rebounding"]},
+  {name:"Tobias Harris",pos:"PF",ovr:80,scoring:78,playmaking:72,defense:74,shooting:80,rebounding:62,iq:80,
+   stats:{ppg:15.5,rpg:5.8,apg:2.8,spg:0.6,bpg:0.3,fgPct:.468,threePct:.358,tsPct:.568,per:14.0,bpm:0.2,trajectory:"declining"},
+   accolades:"--",style:"steady mid-range scorer",scheme:"motion / iso",strengths:["mid-range","consistency","veteran play"]},
+  {name:"Jerami Grant",pos:"PF",ovr:81,scoring:80,playmaking:68,defense:78,shooting:78,rebounding:56,iq:78,
+   stats:{ppg:18.0,rpg:4.5,apg:2.5,spg:0.8,bpg:0.8,fgPct:.445,threePct:.342,tsPct:.558,per:15.0,bpm:0.5,trajectory:"stable"},
+   accolades:"MIP finalist",style:"athletic stretch-4",scheme:"drive-and-shoot",strengths:["athleticism","improving 3pt","shot-blocking"]},
+  {name:"Aaron Gordon",pos:"PF",ovr:82,scoring:76,playmaking:72,defense:82,shooting:72,rebounding:66,iq:82,
+   stats:{ppg:14.5,rpg:6.5,apg:3.2,spg:0.8,bpg:0.6,fgPct:.525,threePct:.332,tsPct:.585,per:15.2,bpm:2.0,trajectory:"stable"},
+   accolades:"NBA Champ",style:"glue-guy forward",scheme:"connective defense",strengths:["defensive versatility","lob finishing","transition"]},
+  {name:"Jabari Smith Jr.",pos:"PF",ovr:82,scoring:78,playmaking:66,defense:82,shooting:80,rebounding:68,iq:80,
+   stats:{ppg:14.0,rpg:6.5,apg:1.5,spg:0.8,bpg:1.0,fgPct:.445,threePct:.342,tsPct:.560,per:14.2,bpm:0.5,trajectory:"ascending"},
+   accolades:"--",style:"3-and-D big",scheme:"stretch-4 / rim protection",strengths:["3pt for size","defensive upside","length"]},
+  {name:"Jonathan Kuminga",pos:"PF",ovr:81,scoring:80,playmaking:68,defense:76,shooting:72,rebounding:58,iq:76,
+   stats:{ppg:16.8,rpg:4.8,apg:2.5,spg:0.6,bpg:0.5,fgPct:.472,threePct:.318,tsPct:.552,per:14.5,bpm:0.2,trajectory:"ascending"},
+   accolades:"--",style:"raw athletic forward",scheme:"transition / face-up",strengths:["athleticism","driving","physical tools"]},
+  {name:"Victor Wembanyama",pos:"C",ovr:90,scoring:84,playmaking:76,defense:94,shooting:80,rebounding:82,iq:88,
+   stats:{ppg:22.0,rpg:10.5,apg:3.8,spg:1.2,bpg:3.6,fgPct:.465,threePct:.335,tsPct:.570,per:24.8,bpm:7.2,trajectory:"ascending"},
+   accolades:"ROY, DPOY, All-Defensive 1st",style:"generational unicorn",scheme:"rim protection / perimeter shooting big",strengths:["7'4 shot-blocking","3pt range","defensive anchor"]},
+
+  // ── Centers ──
+  {name:"Nikola Jokic",pos:"C",ovr:97,scoring:90,playmaking:98,defense:78,shooting:82,rebounding:92,iq:99,
+   stats:{ppg:26.4,rpg:12.4,apg:9.0,spg:1.4,bpg:0.8,fgPct:.575,threePct:.348,tsPct:.648,per:31.8,bpm:13.0,trajectory:"peak"},
+   accolades:"3x MVP, NBA Champ, Finals MVP",style:"point center",scheme:"motion / 5-out hub",strengths:["passing vision","post game","basketball IQ"]},
+  {name:"Joel Embiid",pos:"C",ovr:94,scoring:94,playmaking:76,defense:88,shooting:82,rebounding:86,iq:90,
+   stats:{ppg:33.1,rpg:11.2,apg:5.7,spg:1.0,bpg:1.7,fgPct:.529,threePct:.351,tsPct:.628,per:31.0,bpm:9.2,trajectory:"declining"},
+   accolades:"MVP, Scoring Champ, 7x All-Star",style:"dominant post scorer",scheme:"iso post-up / face-up",strengths:["post moves","free-throw drawing","rim protection"]},
+  {name:"Bam Adebayo",pos:"C",ovr:87,scoring:80,playmaking:80,defense:90,shooting:72,rebounding:80,iq:88,
+   stats:{ppg:19.5,rpg:10.2,apg:4.8,spg:1.1,bpg:0.8,fgPct:.522,threePct:.248,tsPct:.575,per:21.2,bpm:4.5,trajectory:"peak"},
+   accolades:"3x All-Star, All-Defensive, Olympic Gold",style:"switchable defensive big",scheme:"switch-everything / DHO",strengths:["switch ability","dribble handoffs","defensive QB"]},
+  {name:"Rudy Gobert",pos:"C",ovr:84,scoring:62,playmaking:58,defense:96,shooting:50,rebounding:90,iq:86,
+   stats:{ppg:11.8,rpg:11.5,apg:1.5,spg:0.6,bpg:2.2,fgPct:.660,threePct:.000,tsPct:.642,per:19.0,bpm:3.0,trajectory:"declining"},
+   accolades:"4x DPOY, 3x All-Star",style:"elite rim protector",scheme:"drop coverage",strengths:["shot alteration","rim protection","rebounding"]},
+  {name:"Draymond Green",pos:"C",ovr:80,scoring:60,playmaking:82,defense:90,shooting:62,rebounding:66,iq:95,
+   stats:{ppg:8.8,rpg:6.2,apg:5.8,spg:1.0,bpg:0.8,fgPct:.445,threePct:.320,tsPct:.530,per:13.5,bpm:3.0,trajectory:"declining"},
+   accolades:"4x Champ, DPOY, 4x All-Star",style:"defensive brain",scheme:"switch-everything / small-ball 5",strengths:["defensive IQ","passing big","championship DNA"]},
+  {name:"Brook Lopez",pos:"C",ovr:82,scoring:76,playmaking:60,defense:86,shooting:82,rebounding:68,iq:84,
+   stats:{ppg:12.8,rpg:5.0,apg:1.5,spg:0.5,bpg:2.4,fgPct:.480,threePct:.358,tsPct:.582,per:18.2,bpm:2.5,trajectory:"declining"},
+   accolades:"NBA Champ, All-Star",style:"stretch-5 rim protector",scheme:"drop coverage / pick-and-pop",strengths:["3pt shooting big","rim protection","post hook"]},
+  {name:"Myles Turner",pos:"C",ovr:82,scoring:74,playmaking:62,defense:88,shooting:82,rebounding:68,iq:82,
+   stats:{ppg:16.5,rpg:6.8,apg:1.5,spg:0.6,bpg:2.2,fgPct:.505,threePct:.368,tsPct:.598,per:18.5,bpm:2.2,trajectory:"stable"},
+   accolades:"2x Blocks Leader",style:"shot-blocking spacer",scheme:"rim protection / pick-and-pop",strengths:["shot-blocking","3pt range","vertical threat"]},
+  {name:"Ivica Zubac",pos:"C",ovr:82,scoring:74,playmaking:66,defense:82,shooting:60,rebounding:84,iq:82,
+   stats:{ppg:12.0,rpg:10.5,apg:2.5,spg:0.5,bpg:1.2,fgPct:.585,threePct:.000,tsPct:.590,per:18.0,bpm:2.0,trajectory:"stable"},
+   accolades:"--",style:"traditional big man",scheme:"drop coverage / PnR roller",strengths:["rebounding","screen setting","interior D"]},
+  {name:"Alperen Sengun",pos:"C",ovr:84,scoring:80,playmaking:80,defense:76,shooting:72,rebounding:78,iq:86,
+   stats:{ppg:19.2,rpg:9.5,apg:5.0,spg:0.8,bpg:0.8,fgPct:.528,threePct:.298,tsPct:.590,per:22.0,bpm:4.2,trajectory:"ascending"},
+   accolades:"--",style:"crafty post playmaker",scheme:"high-post hub / post-up",strengths:["post moves","passing","footwork"]},
+  {name:"Al Horford",pos:"C",ovr:78,scoring:68,playmaking:74,defense:82,shooting:80,rebounding:68,iq:90,
+   stats:{ppg:9.0,rpg:6.2,apg:3.0,spg:0.5,bpg:1.0,fgPct:.468,threePct:.365,tsPct:.580,per:14.0,bpm:2.0,trajectory:"declining"},
+   accolades:"5x All-Star, NBA Champ",style:"veteran stretch-5",scheme:"switch defense / pick-and-pop",strengths:["switch ability","3pt shooting","veteran IQ"]},
+  {name:"Nic Claxton",pos:"C",ovr:80,scoring:70,playmaking:62,defense:86,shooting:56,rebounding:76,iq:80,
+   stats:{ppg:11.8,rpg:7.5,apg:1.8,spg:0.8,bpg:2.0,fgPct:.620,threePct:.000,tsPct:.630,per:17.5,bpm:2.5,trajectory:"stable"},
+   accolades:"--",style:"rim-running shot blocker",scheme:"PnR roller / drop coverage",strengths:["lob finishing","rim protection","length"]},
+  {name:"Dereck Lively II",pos:"C",ovr:81,scoring:68,playmaking:62,defense:86,shooting:58,rebounding:78,iq:80,
+   stats:{ppg:10.5,rpg:7.8,apg:1.5,spg:0.6,bpg:1.8,fgPct:.640,threePct:.268,tsPct:.618,per:18.5,bpm:2.8,trajectory:"ascending"},
+   accolades:"--",style:"athletic rim protector",scheme:"PnR roller / lob threat",strengths:["lob finishing","rim protection","mobility"]},
+  {name:"Jarrett Allen",pos:"C",ovr:83,scoring:72,playmaking:64,defense:86,shooting:58,rebounding:86,iq:82,
+   stats:{ppg:13.5,rpg:10.0,apg:2.0,spg:0.6,bpg:1.3,fgPct:.640,threePct:.000,tsPct:.620,per:19.5,bpm:2.8,trajectory:"stable"},
+   accolades:"All-Star",style:"lob-threat rim protector",scheme:"PnR roller",strengths:["lob finishing","rebounding","rim protection"]},
+  {name:"Jakob Poeltl",pos:"C",ovr:81,scoring:72,playmaking:68,defense:82,shooting:54,rebounding:80,iq:82,
+   stats:{ppg:12.5,rpg:8.5,apg:3.0,spg:0.5,bpg:1.2,fgPct:.550,threePct:.000,tsPct:.560,per:16.5,bpm:1.5,trajectory:"stable"},
+   accolades:"--",style:"fundamentals big",scheme:"drop coverage",strengths:["passing for big","interior D","screen setting"]},
+  {name:"Mitchell Robinson",pos:"C",ovr:80,scoring:64,playmaking:55,defense:86,shooting:48,rebounding:86,iq:78,
+   stats:{ppg:8.5,rpg:8.2,apg:0.5,spg:0.5,bpg:1.8,fgPct:.648,threePct:.000,tsPct:.620,per:16.5,bpm:1.8,trajectory:"stable"},
+   accolades:"--",style:"offensive rebounding machine",scheme:"PnR roller / offensive glass",strengths:["putbacks","rim protection","energy"]},
+  {name:"Walker Kessler",pos:"C",ovr:80,scoring:66,playmaking:56,defense:88,shooting:52,rebounding:82,iq:78,
+   stats:{ppg:10.2,rpg:8.0,apg:1.0,spg:0.5,bpg:2.8,fgPct:.628,threePct:.000,tsPct:.600,per:18.2,bpm:2.5,trajectory:"ascending"},
+   accolades:"--",style:"shot-blocking specialist",scheme:"drop coverage",strengths:["block rate","rim protection","length"]},
+  {name:"Jalen Duren",pos:"C",ovr:81,scoring:72,playmaking:64,defense:80,shooting:54,rebounding:84,iq:78,
+   stats:{ppg:13.0,rpg:10.2,apg:2.2,spg:0.5,bpg:0.8,fgPct:.585,threePct:.000,tsPct:.575,per:17.8,bpm:1.8,trajectory:"ascending"},
+   accolades:"--",style:"young powerful big",scheme:"PnR roller",strengths:["athleticism","rebounding","upside"]},
+  {name:"Mark Williams",pos:"C",ovr:80,scoring:72,playmaking:62,defense:82,shooting:52,rebounding:82,iq:78,
+   stats:{ppg:12.0,rpg:8.8,apg:1.5,spg:0.5,bpg:1.5,fgPct:.600,threePct:.000,tsPct:.585,per:17.0,bpm:1.5,trajectory:"ascending"},
+   accolades:"--",style:"mobile rim protector",scheme:"drop coverage / PnR roller",strengths:["length","shot-blocking","finishing"]},
+];
+
+
+// ══════════════════════════════════════════════════════════
+// ENGINE: Stats-weighted simulation (60% recent stats, 20% accolades, 20% intangibles)
+// ══════════════════════════════════════════════════════════
+
+const POSITIONS = ["PG","SG","SF","PF","C"];
+const POS_FULL = {PG:"Point Guard",SG:"Shooting Guard",SF:"Small Forward",PF:"Power Forward",C:"Center"};
+let scorecard = {history:[]};
+let expandedId = null;
+
+// ── Roster UI ──
+function buildRoster(containerId, team) {
+  const container = document.getElementById(containerId);
+  POSITIONS.forEach(pos => {
+    const row = document.createElement('div');
+    row.className = 'pos-row';
+    row.innerHTML = `<div class="pos-label">${pos}</div>
+      <input type="text" placeholder="${POS_FULL[pos]}..." data-team="${team}" data-pos="${pos}" autocomplete="off" spellcheck="false">
+      <div class="ac-list"></div>`;
+    container.appendChild(row);
+    const input = row.querySelector('input'), acList = row.querySelector('.ac-list');
+    let aIdx = -1;
+    input.addEventListener('input', () => {
+      const v = input.value.trim().toLowerCase();
+      acList.innerHTML = ''; aIdx = -1;
+      if (v.length < 1) { acList.classList.remove('show'); return; }
+      const m = PLAYERS.filter(p => p.name.toLowerCase().includes(v)).slice(0, 8);
+      if (!m.length) { acList.classList.remove('show'); return; }
+      m.forEach(p => {
+        const it = document.createElement('div');
+        it.className = 'ac-item';
+        const s = p.stats;
+        const statLine = s ? `${s.ppg}p/${s.rpg}r/${s.apg}a` : '';
+        it.innerHTML = `<span class="ac-name">${p.name}</span><span class="ac-meta"><span class="ac-stats">${statLine}</span><span class="ac-pos">${p.pos}</span><span class="ac-ovr">${p.ovr}</span></span>`;
+        it.addEventListener('mousedown', e => { e.preventDefault(); input.value = p.name; acList.classList.remove('show'); });
+        acList.appendChild(it);
+      });
+      acList.classList.add('show');
+    });
+    input.addEventListener('keydown', e => {
+      const its = acList.querySelectorAll('.ac-item');
+      if (!its.length) return;
+      if (e.key==='ArrowDown'){e.preventDefault();aIdx=Math.min(aIdx+1,its.length-1);upAc(its)}
+      else if(e.key==='ArrowUp'){e.preventDefault();aIdx=Math.max(aIdx-1,0);upAc(its)}
+      else if(e.key==='Enter'&&aIdx>=0){e.preventDefault();its[aIdx].dispatchEvent(new MouseEvent('mousedown'))}
+      else if(e.key==='Escape'){acList.classList.remove('show')}
+    });
+    input.addEventListener('blur', () => setTimeout(() => acList.classList.remove('show'), 150));
+    function upAc(its){its.forEach((el,i)=>el.classList.toggle('active',i===aIdx))}
+  });
+}
+buildRoster('rosterA','a');
+buildRoster('rosterB','b');
+
+// ── Player Lookup ──
+function findPlayer(name) { return PLAYERS.find(p => p.name.toLowerCase() === name.trim().toLowerCase()); }
+function makeCustomPlayer(name, pos) {
+  return {name, pos, ovr:75, scoring:75, playmaking:70, defense:72, shooting:72, rebounding:65, iq:72,
+    stats:{ppg:12.0,rpg:4.0,apg:2.5,spg:0.7,bpg:0.3,fgPct:.440,threePct:.330,tsPct:.540,per:12.0,bpm:0.0,trajectory:"stable"},
+    accolades:"--",style:"role player",scheme:"standard",strengths:["effort","energy","hustle"],slotPos:pos};
+}
+
+// ══════════════════════════════════════════════════════════
+// SCORING ENGINE — weights recent stats over career accolades
+// ══════════════════════════════════════════════════════════
+
+// Recent performance score (0-100) — weighted 60%
+function recentPerfScore(p) {
+  const s = p.stats;
+  if (!s) return 50;
+  let score = 0;
+  // Volume scoring: ppg normalized (35ppg = 100)
+  score += Math.min(s.ppg / 35, 1) * 22;
+  // Efficiency: TS% (league avg ~.570, elite ~.650)
+  score += Math.min(Math.max((s.tsPct - .500) / .160, 0), 1) * 18;
+  // PER (league avg 15, elite 30+)
+  score += Math.min(s.per / 32, 1) * 15;
+  // BPM (0 = avg, 10+ = MVP)
+  score += Math.min(Math.max((s.bpm + 2) / 15, 0), 1) * 15;
+  // Playmaking: apg normalized
+  score += Math.min(s.apg / 10, 1) * 8;
+  // Rebounding
+  score += Math.min(s.rpg / 13, 1) * 6;
+  // Stocks (steals + blocks)
+  score += Math.min((s.spg + s.bpg) / 4, 1) * 8;
+  // 3pt shooting bonus
+  score += Math.min(Math.max((s.threePct - .300) / .120, 0), 1) * 8;
+  // Trajectory modifier
+  if (s.trajectory === 'ascending') score *= 1.06;
+  else if (s.trajectory === 'declining') score *= 0.93;
+  return score;
+}
+
+// Accolades score (0-100) — weighted 20%
+function accoladesScore(p) {
+  const a = (p.accolades || '').toLowerCase();
+  if (a === '--' || !a) return 5;
+  let score = 0;
+  const num = (pat) => { const m = a.match(new RegExp(`(\\d+)x\\s*${pat}`)); return m ? parseInt(m[1]) : a.includes(pat) ? 1 : 0; };
+  score += num('mvp') * 15;
+  score += num('champ') * 10;
+  score += num('finals mvp') * 10;
+  score += num('dpoy') * 10;
+  score += num('all-nba') * 4;
+  score += num('all-star') * 2;
+  score += num('all-defensive') * 3;
+  score += num('mip') * 2;
+  score += num('roy') * 2;
+  score += num('scoring champ') * 5;
+  score += num('assist leader') * 3;
+  score += num('blocks leader') * 3;
+  score += num('steals leader') * 3;
+  // Diminish historical weight — cap at 80 to prevent legends from dominating on accolades alone
+  return Math.min(score, 80);
+}
+
+// Intangibles score (0-100) — weighted 20% (from attribute ratings)
+function intangiblesScore(p) {
+  return (p.defense * .30 + p.iq * .30 + p.playmaking * .20 + p.shooting * .20) / 100 * 100;
+}
+
+// Combined matchup score for head-to-head
+function calcPlayerScore(p, opp) {
+  const recent = recentPerfScore(p) * 0.60;
+  const accs = accoladesScore(p) * 0.20;
+  const intang = intangiblesScore(p) * 0.20;
+  let total = recent + accs + intang;
+
+  // Head-to-head adjustments
+  // Defensive matchup: strong defender vs high scorer
+  if (p.defense > 84 && opp.stats && opp.stats.ppg > 25) total += 2;
+  if (p.stats && opp.defense > 84 && p.stats.ppg > 25) total -= 1;
+  // Efficiency bonus in matchup
+  if (p.stats && p.stats.tsPct > .610) total += 1.5;
+  // Shooting advantage creates spacing pressure
+  if (p.stats && p.stats.threePct > .380 && opp.defense < 80) total += 1.5;
+
+  return total;
+}
+
+function calcSynergy(roster) {
+  let b = 0;
+  const shooters = roster.filter(p => p.stats && p.stats.threePct >= .360).length;
+  b += shooters * 2;
+  const bestPM = Math.max(...roster.map(p => p.stats ? p.stats.apg : 0));
+  b += bestPM > 8 ? 4 : bestPM > 6 ? 2.5 : bestPM > 4 ? 1 : 0;
+  const avgDef = roster.reduce((s,p) => s + p.defense, 0) / 5;
+  b += avgDef >= 84 ? 3.5 : avgDef >= 78 ? 2 : 0;
+  const avgIQ = roster.reduce((s,p) => s + p.iq, 0) / 5;
+  b += avgIQ >= 88 ? 2.5 : avgIQ >= 84 ? 1 : 0;
+  // Combined TS% bonus
+  const avgTS = roster.reduce((s,p) => s + (p.stats ? p.stats.tsPct : .540), 0) / 5;
+  b += avgTS >= .600 ? 3 : avgTS >= .580 ? 1.5 : 0;
+  return b;
+}
+
+function evaluateSchemefit(roster) {
+  const allText = roster.map(p => `${p.style||''} ${p.scheme||''}`).join(' ').toLowerCase();
+  let fit = 50;
+  fit += ((allText.match(/motion|off-ball|catch-and-shoot|off-screen/g)||[]).length) * 4;
+  fit += ((allText.match(/switch/g)||[]).length) * 3;
+  const isoCount = (allText.match(/\biso\b/g)||[]).length;
+  if (isoCount > 2) fit -= (isoCount - 2) * 6;
+  const pnrH = roster.filter(p => (p.scheme||'').toLowerCase().includes('pnr') && p.playmaking >= 80).length;
+  const rollers = roster.filter(p => (p.scheme||'').toLowerCase().match(/roller|lob/)).length;
+  if (pnrH > 0 && rollers > 0) fit += 8;
+  const spacers = roster.filter(p => p.stats && p.stats.threePct >= .350).length;
+  if (spacers < 2) fit -= 10;
+  if (spacers >= 4) fit += 5;
+  return Math.max(20, Math.min(98, fit));
+}
+
+function countAccolades(roster) {
+  let mvps=0,rings=0,allstars=0,allnba=0,dpoys=0,fmvps=0;
+  roster.forEach(p => {
+    const a = (p.accolades||'').toLowerCase();
+    const n = (pat) => { const m = a.match(new RegExp(`(\\d+)x\\s*${pat}`)); return m ? parseInt(m[1]) : a.includes(pat) ? 1 : 0; };
+    mvps += n('mvp') - n('finals mvp'); rings += n('champ'); allstars += n('all-star');
+    allnba += n('all-nba'); dpoys += n('dpoy'); fmvps += n('finals mvp');
+  });
+  return {mvps,rings,allstars,allnba,dpoys,fmvps};
+}
+
+// Team aggregate stats
+function teamStats(roster) {
+  const avg = (fn) => (roster.reduce((s,p) => s + fn(p), 0) / 5).toFixed(1);
+  const avgPct = (fn) => (roster.reduce((s,p) => s + fn(p), 0) / 5 * 100).toFixed(1);
+  return {
+    ppg: avg(p => p.stats ? p.stats.ppg : 12),
+    rpg: avg(p => p.stats ? p.stats.rpg : 4),
+    apg: avg(p => p.stats ? p.stats.apg : 2),
+    tsPct: avgPct(p => p.stats ? p.stats.tsPct : .540),
+    per: avg(p => p.stats ? p.stats.per : 12),
+    bpm: avg(p => p.stats ? p.stats.bpm : 0),
+    threePct: avgPct(p => p.stats ? p.stats.threePct : .330),
+  };
+}
+
+function getMatchupNarrative(a, b, pos) {
+  const sa = a.stats, sb = b.stats;
+  let lines = [];
+
+  // Stats-driven narrative
+  if (sa && sb) {
+    if (sa.ppg >= 25 && sb.ppg >= 25) {
+      lines.push(`A heavyweight scoring duel: ${a.name} at ${sa.ppg} PPG (${(sa.tsPct*100).toFixed(1)}% TS) vs ${b.name} at ${sb.ppg} PPG (${(sb.tsPct*100).toFixed(1)}% TS).`);
+    } else if (sa.ppg >= 25 || sb.ppg >= 25) {
+      const star = sa.ppg >= 25 ? a : b;
+      const other = sa.ppg >= 25 ? b : a;
+      const ss = star.stats, os = other.stats;
+      lines.push(`${star.name}'s ${ss.ppg} PPG scoring load dwarfs ${other.name}'s ${os.ppg}, but ${other.name} contributes through ${os.apg >= 5 ? `playmaking (${os.apg} APG)` : os.rpg >= 8 ? `rebounding (${os.rpg} RPG)` : `defense (${other.defense} DEF)`}.`);
+    }
+
+    // Efficiency comparison
+    if (Math.abs(sa.tsPct - sb.tsPct) > .030) {
+      const eff = sa.tsPct > sb.tsPct ? a : b;
+      const es = eff.stats;
+      lines.push(`${eff.name} holds a significant efficiency edge at ${(es.tsPct*100).toFixed(1)}% TS — more impactful per possession.`);
+    }
+
+    // Defensive matchup
+    if (a.defense >= 85 && sb.ppg >= 22) {
+      lines.push(`${a.name}'s elite defense (${a.defense} DEF, ${sa.spg+sa.bpg > 2 ? (sa.spg+sa.bpg).toFixed(1)+' stocks' : sa.spg+' STL'}) will contest ${b.name}'s volume scoring.`);
+    } else if (b.defense >= 85 && sa.ppg >= 22) {
+      lines.push(`${b.name}'s lockdown defense (${b.defense} DEF) presents a real challenge for ${a.name}'s ${sa.ppg} PPG output.`);
+    }
+  }
+
+  // Style clash
+  if (a.style && b.style && a.style !== b.style) {
+    lines.push(`Style contrast: ${a.name}'s ${a.style} approach vs ${b.name}'s ${b.style} identity.`);
+  }
+
+  // Trajectory
+  if (sa && sb && sa.trajectory !== sb.trajectory) {
+    const asc = [a,b].find(p => p.stats.trajectory === 'ascending');
+    const dec = [a,b].find(p => p.stats.trajectory === 'declining');
+    if (asc && dec) lines.push(`${asc.name} is trending upward while ${dec.name}'s production has dipped — trajectory favors ${asc.name}.`);
+  }
+
+  if (!lines.length) {
+    lines.push(`A solid ${POS_FULL[pos]} matchup with ${a.name}'s ${(a.strengths||[])[0]||'game'} tested by ${b.name}'s ${(b.strengths||[])[0]||'game'}.`);
+  }
+  return lines.join(' ');
+}
+
+// ══════════════════════════════════════════════════════════
+// SIMULATE
+// ══════════════════════════════════════════════════════════
+function simulate() {
+  const teamAName = document.getElementById('teamAName').value || 'Team A';
+  const teamBName = document.getElementById('teamBName').value || 'Team B';
+  const inputsA = document.querySelectorAll('#rosterA input');
+  const inputsB = document.querySelectorAll('#rosterB input');
+  const rosterA = [], rosterB = [];
+  let valid = true;
+  inputsA.forEach((inp,i) => {
+    const p = findPlayer(inp.value);
+    if (p) rosterA.push({...p,slotPos:POSITIONS[i]});
+    else if (inp.value.trim()) rosterA.push(makeCustomPlayer(inp.value.trim(),POSITIONS[i]));
+    else valid = false;
+  });
+  inputsB.forEach((inp,i) => {
+    const p = findPlayer(inp.value);
+    if (p) rosterB.push({...p,slotPos:POSITIONS[i]});
+    else if (inp.value.trim()) rosterB.push(makeCustomPlayer(inp.value.trim(),POSITIONS[i]));
+    else valid = false;
+  });
+  if (!valid || rosterA.length < 5 || rosterB.length < 5) return;
+
+  const matchups = [];
+  let totalA = 0, totalB = 0;
+  for (let i = 0; i < 5; i++) {
+    const a = rosterA[i], b = rosterB[i];
+    const sA = calcPlayerScore(a,b), sB = calcPlayerScore(b,a);
+    totalA += sA; totalB += sB;
+    matchups.push({pos:POSITIONS[i],a,b,scoreA:sA,scoreB:sB,
+      winner:sA>sB?'A':sA<sB?'B':'TIE',
+      narrative:getMatchupNarrative(a,b,POSITIONS[i])});
+  }
+
+  const synA = calcSynergy(rosterA), synB = calcSynergy(rosterB);
+  totalA += synA; totalB += synB;
+  totalA += (Math.random()-.5)*5; totalB += (Math.random()-.5)*5;
+
+  const pctA = Math.max(5,Math.min(95,Math.round(totalA/(totalA+totalB)*100)));
+  const pctB = 100 - pctA;
+  const winner = pctA >= pctB ? 'A' : 'B';
+
+  const simData = {
+    id:Date.now(), teamA:teamAName, teamB:teamBName,
+    rosterA, rosterB, matchups, pctA, pctB, winner,
+    synA, synB,
+    schemeA:evaluateSchemefit(rosterA), schemeB:evaluateSchemefit(rosterB),
+    accA:countAccolades(rosterA), accB:countAccolades(rosterB),
+    tsA:teamStats(rosterA), tsB:teamStats(rosterB),
+    time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),
+    date:new Date().toLocaleDateString([],{month:'short',day:'numeric'})
+  };
+
+  renderLiveResults(simData);
+  scorecard.history.unshift(simData);
+  if (scorecard.history.length > 20) scorecard.history.pop();
+  renderScorecard();
+}
+
+// ══════════════════════════════════════════════════════════
+// RENDER LIVE RESULTS
+// ══════════════════════════════════════════════════════════
+function renderLiveResults(d) {
+  const panel = document.getElementById('resultsPanel');
+  panel.classList.add('show');
+  document.getElementById('resultsTitle').textContent = `${d.teamA} vs ${d.teamB}`;
+  document.getElementById('colA').textContent = d.teamA;
+  document.getElementById('colB').textContent = d.teamB;
+  document.getElementById('barLabelA').textContent = `${d.teamA}  ${d.pctA}%`;
+  document.getElementById('barLabelB').textContent = `${d.pctB}%  ${d.teamB}`;
+  document.getElementById('barA').style.width = d.pctA+'%';
+  document.getElementById('barA').textContent = d.pctA>12?d.pctA+'%':'';
+  document.getElementById('barB').style.width = d.pctB+'%';
+  document.getElementById('barB').textContent = d.pctB>12?d.pctB+'%':'';
+
+  document.getElementById('analysisGrid').innerHTML = buildAnalysisCards(d);
+
+  const tbody = document.getElementById('matchupBody');
+  tbody.innerHTML = '';
+  d.matchups.forEach(m => {
+    const wCls = m.winner==='A'?'winner-a':m.winner==='B'?'winner-b':'winner-tie';
+    const wTxt = m.winner==='A'?d.teamA:m.winner==='B'?d.teamB:'Even';
+    const sa = m.a.stats, sb = m.b.stats;
+    const statA = sa ? `${sa.ppg}p / ${sa.rpg}r / ${sa.apg}a | ${(sa.tsPct*100).toFixed(1)}% TS` : '';
+    const statB = sb ? `${sb.ppg}p / ${sb.rpg}r / ${sb.apg}a | ${(sb.tsPct*100).toFixed(1)}% TS` : '';
+    const trajA = sa ? sa.trajectory : '';
+    const trajB = sb ? sb.trajectory : '';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><strong>${m.pos}</strong></td>
+      <td><div class="player-cell"><span class="player-name">${m.a.name}${trajBadge(trajA)}</span><span class="player-stats">${statA}</span><span class="player-detail">${m.a.ovr} OVR &middot; ${m.a.style||''}</span></div></td>
+      <td><span class="winner-badge ${wCls}">${wTxt}</span></td>
+      <td><div class="player-cell"><span class="player-name">${m.b.name}${trajBadge(trajB)}</span><span class="player-stats">${statB}</span><span class="player-detail">${m.b.ovr} OVR &middot; ${m.b.style||''}</span></div></td>
+      <td><div class="matchup-note">${m.narrative}</div></td>`;
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById('verdict').innerHTML = buildVerdict(d);
+  panel.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function trajBadge(t) {
+  if (!t || t==='stable') return '';
+  const labels = {ascending:'Rising',peak:'Peak',declining:'Declining'};
+  return ` <span class="traj-badge traj-${t}">${labels[t]||t}</span>`;
+}
+
+function buildAnalysisCards(d) {
+  const {teamA,teamB,schemeA,schemeB,accA,accB,tsA,tsB,rosterA,rosterB} = d;
+
+  // Stats comparison card
+  const statRow = (label,va,vb,higherBetter=true) => {
+    const a=parseFloat(va),b=parseFloat(vb);
+    const aw = higherBetter ? a>b : a<b;
+    const bw = higherBetter ? b>a : b<a;
+    return `<div class="sg-row"><span class="sg-label">${label}</span><span class="sg-val-a ${aw?'sg-val-win':''}">${va}</span><span class="sg-val-b ${bw?'sg-val-win':''}">${vb}</span></div>`;
+  };
+
+  const statsCard = `<div class="analysis-card"><h3>Recent Performance (Last 3 Years)</h3>
+    <p style="font-size:.72rem;color:var(--muted);margin-bottom:8px">Team averages — <span class="hl">underlined = advantage</span>. Current production weighted 60% in simulation.</p>
+    <div style="display:grid;grid-template-columns:auto 1fr 1fr;gap:0;font-size:.78rem">
+      <div class="sg-row" style="border-bottom:1px solid var(--border2)"><span class="sg-label">STAT</span><span class="sg-val-a" style="font-size:.68rem">${teamA}</span><span class="sg-val-b" style="font-size:.68rem">${teamB}</span></div>
+      ${statRow('PPG',tsA.ppg,tsB.ppg)}
+      ${statRow('RPG',tsA.rpg,tsB.rpg)}
+      ${statRow('APG',tsA.apg,tsB.apg)}
+      ${statRow('TS%',tsA.tsPct+'%',tsB.tsPct+'%')}
+      ${statRow('3PT%',tsA.threePct+'%',tsB.threePct+'%')}
+      ${statRow('PER',tsA.per,tsB.per)}
+      ${statRow('BPM',tsA.bpm,tsB.bpm)}
+    </div></div>`;
+
+  // Accolades
+  const fmtAcc = a => `${a.mvps} MVP, ${a.rings} Rings, ${a.fmvps} FMVP, ${a.dpoys} DPOY, ${a.allnba} All-NBA, ${a.allstars} All-Star`;
+  const accTotalA = accA.mvps*5+accA.rings*4+accA.fmvps*4+accA.dpoys*3+accA.allnba*2+accA.allstars;
+  const accTotalB = accB.mvps*5+accB.rings*4+accB.fmvps*4+accB.dpoys*3+accB.allnba*2+accB.allstars;
+  const accLead = accTotalA>accTotalB?teamA:accTotalB>accTotalA?teamB:'Even';
+  const accCard = `<div class="analysis-card"><h3>Accolades & Pedigree (20% weight)</h3>
+    <p><span class="hl">${teamA}:</span> ${fmtAcc(accA)}<br><span class="hl">${teamB}:</span> ${fmtAcc(accB)}<br><br>
+    ${accLead!=='Even'?`<span class="hl">${accLead}</span> has more proven hardware — but accolades are weighted at only 20%, so current production can override legacy.`:'Comparable accolades on both sides.'}</p></div>`;
+
+  // Scheme
+  const sLead = schemeA>schemeB?teamA:schemeB>schemeA?teamB:'Even';
+  const schemeCard = `<div class="analysis-card"><h3>Style & Scheme Fit</h3>
+    <p><span class="hl">${teamA}:</span> ${schemeA}/100 &nbsp;&middot;&nbsp; <span class="hl">${teamB}:</span> ${schemeB}/100<br><br>
+    ${sLead!=='Even'?`${sLead} runs a more cohesive system — better role clarity, spacing compatibility, and fewer ball-dominance conflicts.`:'Both teams show comparable scheme cohesion.'}</p></div>`;
+
+  // Synergy + Trajectory
+  const ascA = rosterA.filter(p=>p.stats&&p.stats.trajectory==='ascending').length;
+  const ascB = rosterB.filter(p=>p.stats&&p.stats.trajectory==='ascending').length;
+  const decA = rosterA.filter(p=>p.stats&&p.stats.trajectory==='declining').length;
+  const decB = rosterB.filter(p=>p.stats&&p.stats.trajectory==='declining').length;
+  const synCard = `<div class="analysis-card"><h3>Synergy & Trajectory</h3>
+    <p><span class="hl">${teamA}:</span> ${rosterA.filter(p=>p.stats&&p.stats.threePct>=.360).length} 3pt shooters, ${(rosterA.reduce((s,p)=>s+p.defense,0)/5).toFixed(0)} avg DEF, ${ascA} rising / ${decA} declining<br>
+    <span class="hl">${teamB}:</span> ${rosterB.filter(p=>p.stats&&p.stats.threePct>=.360).length} 3pt shooters, ${(rosterB.reduce((s,p)=>s+p.defense,0)/5).toFixed(0)} avg DEF, ${ascB} rising / ${decB} declining<br><br>
+    ${ascA>ascB+1?`${teamA} has more ascending talent — their upward trajectory suggests a higher ceiling going forward.`:ascB>ascA+1?`${teamB} has more ascending talent — youth and improvement trajectory favor their side.`:'Similar trajectory profiles on both rosters — neither side has a clear youth or momentum edge.'}</p></div>`;
+
+  return statsCard + accCard + schemeCard + synCard;
+}
+
+function buildVerdict(d) {
+  const {teamA,teamB,pctA,pctB,winner,matchups,rosterA,rosterB,synA,synB,accA,accB,tsA,tsB} = d;
+  const wName = winner==='A'?teamA:teamB;
+  const lName = winner==='A'?teamB:teamA;
+  const wPct = winner==='A'?pctA:pctB;
+  const posWins = matchups.filter(m=>m.winner===winner).length;
+  const margin = Math.abs(pctA-pctB);
+  const closeness = margin<=4?"a razor-thin margin":margin<=10?"a solid advantage":margin<=18?"a clear advantage":"a commanding advantage";
+
+  // Find best recent performer (by PER)
+  const bestRecentA = [...rosterA].sort((a,b)=>(b.stats?b.stats.per:0)-(a.stats?a.stats.per:0))[0];
+  const bestRecentB = [...rosterB].sort((a,b)=>(b.stats?b.stats.per:0)-(a.stats?a.stats.per:0))[0];
+
+  let v = `<h3>Expert Verdict</h3><p>`;
+  v += `<strong>${wName}</strong> takes this matchup with ${closeness} at <strong>${wPct}% win probability</strong>, winning ${posWins} of 5 positional battles. `;
+
+  // Stats-grounded verdict
+  const wTS = winner==='A'?tsA:tsB;
+  const lTS = winner==='A'?tsB:tsA;
+  v += `The simulation weighs current production heavily: ${wName}'s roster averages ${wTS.ppg} PPG on ${wTS.tsPct}% TS with a ${wTS.per} PER, `;
+  v += `compared to ${lName}'s ${lTS.ppg} PPG on ${lTS.tsPct}% TS (${lTS.per} PER). `;
+
+  v += `${bestRecentA.name} (${bestRecentA.stats?bestRecentA.stats.per+' PER':'—'}) anchors ${teamA}, while ${bestRecentB.name} (${bestRecentB.stats?bestRecentB.stats.per+' PER':'—'}) leads ${teamB}. `;
+
+  // Accolades context
+  const accTotalA = accA.mvps*5+accA.rings*4+accA.fmvps*4;
+  const accTotalB = accB.mvps*5+accB.rings*4+accB.fmvps*4;
+  const hwEdge = accTotalA>accTotalB?teamA:accTotalB>accTotalA?teamB:null;
+  if (hwEdge && hwEdge !== wName) {
+    v += `Despite ${hwEdge}'s superior championship pedigree, current statistical output gives ${wName} the edge — recent form outweighs past glory in this model. `;
+  } else if (hwEdge === wName) {
+    v += `${wName} also holds the accolades edge, reinforcing their advantage with proven winning pedigree. `;
+  }
+
+  if (margin <= 4) v += `This is essentially a coin flip — either squad could win on any given night.`;
+  else if (margin <= 10) v += `${lName} has a viable path through key individual outperformance, but ${wName}'s overall statistical profile is stronger.`;
+  else v += `${lName} would need career-best outings from multiple players to overcome ${wName}'s statistical superiority.`;
+
+  v += `</p>`;
+  return v;
+}
+
+// ══════════════════════════════════════════════════════════
+// SCORECARD & HISTORY
+// ══════════════════════════════════════════════════════════
+function getWins() {
+  let a=0,b=0;
+  scorecard.history.forEach(h=>{if(h.winner==='A')a++;else b++;});
+  return {a,b};
+}
+
+function renderScorecard() {
+  const wins = getWins();
+  const la = scorecard.history.length?scorecard.history[0].teamA:'Team A';
+  const lb = scorecard.history.length?scorecard.history[0].teamB:'Team B';
+  document.getElementById('winsA').textContent = wins.a;
+  document.getElementById('winsB').textContent = wins.b;
+  document.getElementById('winsALabel').textContent = la+' Wins';
+  document.getElementById('winsBLabel').textContent = lb+' Wins';
+
+  const hist = document.getElementById('history');
+  if (!scorecard.history.length) {
+    hist.innerHTML = '<div class="empty-history">No simulations yet — run your first matchup.</div>';
+    return;
+  }
+  hist.innerHTML = '';
+  scorecard.history.forEach(h => {
+    const item = document.createElement('div');
+    item.className = 'history-item';
+    item.id = 'hist-'+h.id;
+    const isOpen = expandedId === h.id;
+    item.innerHTML = `
+      <div class="history-summary" onclick="toggleDetail(${h.id})">
+        <div class="history-left">
+          <div class="history-indicator ${h.winner==='A'?'win-a':'win-b'}"></div>
+          <span class="history-teams">${h.teamA} vs ${h.teamB}</span>
+        </div>
+        <span class="history-score">${h.pctA}% — ${h.pctB}%</span>
+        <div class="history-actions">
+          <span class="history-time">${h.date} ${h.time}</span>
+          <button class="expand-btn ${isOpen?'open':''}" onclick="event.stopPropagation();toggleDetail(${h.id})">&#9662;</button>
+          <button class="delete-btn" onclick="event.stopPropagation();deleteSim(${h.id})">Remove</button>
+        </div>
+      </div>
+      <div class="history-detail ${isOpen?'show':''}" id="detail-${h.id}">
+        ${buildDetailHTML(h)}
+      </div>`;
+    hist.appendChild(item);
+  });
+}
+
+function buildDetailHTML(d) {
+  let html = '';
+  html += `<div class="detail-win-bar">
+    <div class="win-prob-labels" style="font-size:.78rem"><span class="team-a-label">${d.teamA} ${d.pctA}%</span><span class="team-b-label">${d.pctB}% ${d.teamB}</span></div>
+    <div class="win-bar" style="height:24px;border-radius:6px"><div class="bar-a" style="width:${d.pctA}%;font-size:.72rem">${d.pctA>15?d.pctA+'%':''}</div><div class="bar-b" style="width:${d.pctB}%;font-size:.72rem">${d.pctB>15?d.pctB+'%':''}</div></div></div>`;
+
+  // Team stats comparison
+  if (d.tsA && d.tsB) {
+    html += `<div class="detail-section"><h4>Recent Performance Comparison</h4>
+      <p><strong>${d.teamA}:</strong> ${d.tsA.ppg} PPG, ${d.tsA.tsPct}% TS, ${d.tsA.per} PER, ${d.tsA.bpm} BPM<br>
+      <strong>${d.teamB}:</strong> ${d.tsB.ppg} PPG, ${d.tsB.tsPct}% TS, ${d.tsB.per} PER, ${d.tsB.bpm} BPM</p></div>`;
+  }
+
+  // Scheme
+  html += `<div class="detail-section"><h4>Style & Scheme Fit</h4>
+    <p><strong>${d.teamA}:</strong> ${d.schemeA}/100 &middot; <strong>${d.teamB}:</strong> ${d.schemeB}/100 &middot; Edge: <strong>${d.schemeA>d.schemeB?d.teamA:d.schemeB>d.schemeA?d.teamB:'Even'}</strong></p></div>`;
+
+  // Accolades
+  const fA = a => `${a.mvps} MVP, ${a.rings} Rings, ${a.fmvps} FMVP, ${a.dpoys} DPOY`;
+  html += `<div class="detail-section"><h4>Accolades</h4>
+    <p><strong>${d.teamA}:</strong> ${fA(d.accA)}<br><strong>${d.teamB}:</strong> ${fA(d.accB)}</p></div>`;
+
+  // Matchups
+  html += `<div class="detail-section"><h4>Positional Matchups</h4><table class="detail-matchups">`;
+  d.matchups.forEach(m => {
+    const wCls = m.winner==='A'?'winner-a':m.winner==='B'?'winner-b':'winner-tie';
+    const wTxt = m.winner==='A'?d.teamA:m.winner==='B'?d.teamB:'Even';
+    const sa = m.a.stats, sb = m.b.stats;
+    const sLineA = sa ? `${sa.ppg}p/${sa.rpg}r/${sa.apg}a ${(sa.tsPct*100).toFixed(1)}%TS` : '';
+    const sLineB = sb ? `${sb.ppg}p/${sb.rpg}r/${sb.apg}a ${(sb.tsPct*100).toFixed(1)}%TS` : '';
+    html += `<tr>
+      <td style="font-weight:700;width:30px">${m.pos}</td>
+      <td>${m.a.name} <span style="color:var(--accent2);font-size:.68rem">${sLineA}</span></td>
+      <td><span class="winner-badge ${wCls}" style="font-size:.68rem">${wTxt}</span></td>
+      <td>${m.b.name} <span style="color:var(--accent2);font-size:.68rem">${sLineB}</span></td></tr>
+      <tr><td></td><td colspan="3" style="padding-top:0;font-size:.72rem;color:var(--text2);font-style:italic;line-height:1.4;border-bottom:1px solid var(--border)">${m.narrative}</td></tr>`;
+  });
+  html += `</table></div>`;
+
+  const wName = d.winner==='A'?d.teamA:d.teamB;
+  const margin = Math.abs(d.pctA-d.pctB);
+  const closeness = margin<=4?"razor-thin":margin<=10?"solid":margin<=18?"clear":"commanding";
+  html += `<div class="detail-section"><h4>Verdict</h4>
+    <p><strong>${wName}</strong> wins with a ${closeness} ${Math.max(d.pctA,d.pctB)}% win probability. ${margin<=4?'A true toss-up — could go either way.':''}</p></div>`;
+  return html;
+}
+
+function toggleDetail(id) {
+  expandedId = expandedId===id ? null : id;
+  renderScorecard();
+}
+
+function deleteSim(id) {
+  scorecard.history = scorecard.history.filter(h=>h.id!==id);
+  if (expandedId===id) expandedId = null;
+  renderScorecard();
+}
+
+function resetScorecard() {
+  scorecard.history = [];
+  expandedId = null;
+  renderScorecard();
+}
+
+renderScorecard();
+
+</script>
+</body>
+</html>
