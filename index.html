@@ -809,6 +809,28 @@ function simulate() {
       narrative:getMatchupNarrative(a,b,POSITIONS[i])});
   }
 
+  // ── Positional Dominance ──
+  let posWinsA = 0, posWinsB = 0;
+  const posMargins = [];
+  matchups.forEach(m => {
+    const margin = Math.abs(m.scoreA - m.scoreB);
+    const dominance = margin > 8 ? 'dominant' : margin > 4 ? 'clear' : 'slim';
+    posMargins.push({pos:m.pos, margin:margin.toFixed(1), dominance, winner:m.winner});
+    if (m.winner === 'A') posWinsA++;
+    else if (m.winner === 'B') posWinsB++;
+  });
+
+  // Per-position win bonus (+2 each)
+  let posBonusA = posWinsA * 2;
+  let posBonusB = posWinsB * 2;
+  // Sweep bonus: winning 4+ positions = +5 extra, sweeping all 5 = +8 extra
+  if (posWinsA >= 5) posBonusA += 8;
+  else if (posWinsA >= 4) posBonusA += 5;
+  if (posWinsB >= 5) posBonusB += 8;
+  else if (posWinsB >= 4) posBonusB += 5;
+
+  totalA += posBonusA; totalB += posBonusB;
+
   const synA = calcSynergy(rosterA), synB = calcSynergy(rosterB);
   totalA += synA; totalB += synB;
   totalA += (Math.random()-.5)*5; totalB += (Math.random()-.5)*5;
@@ -820,7 +842,7 @@ function simulate() {
   const simData = {
     id:Date.now(), teamA:teamAName, teamB:teamBName,
     rosterA, rosterB, matchups, pctA, pctB, winner,
-    synA, synB,
+    synA, synB, posWinsA, posWinsB, posBonusA, posBonusB, posMargins,
     schemeA:evaluateSchemefit(rosterA), schemeB:evaluateSchemefit(rosterB),
     accA:countAccolades(rosterA), accB:countAccolades(rosterB),
     tsA:teamStats(rosterA), tsB:teamStats(rosterB),
@@ -931,15 +953,42 @@ function buildAnalysisCards(d) {
     <span class="hl">${teamB}:</span> ${rosterB.filter(p=>p.stats&&p.stats.threePct>=.360).length} 3pt shooters, ${(rosterB.reduce((s,p)=>s+p.defense,0)/5).toFixed(0)} avg DEF, ${ascB} rising / ${decB} declining<br><br>
     ${ascA>ascB+1?`${teamA} has more ascending talent — their upward trajectory suggests a higher ceiling going forward.`:ascB>ascA+1?`${teamB} has more ascending talent — youth and improvement trajectory favor their side.`:'Similar trajectory profiles on both rosters — neither side has a clear youth or momentum edge.'}</p></div>`;
 
-  return statsCard + accCard + schemeCard + synCard;
+  // Positional Dominance card
+  const {posWinsA:pwA,posWinsB:pwB,posBonusA:pbA,posBonusB:pbB,posMargins:pm} = d;
+  const posDomLead = (pwA||0)>(pwB||0)?teamA:(pwB||0)>(pwA||0)?teamB:'Even';
+  let posRows = '';
+  if (pm && pm.length) {
+    pm.forEach(p => {
+      const wLabel = p.winner==='A'?teamA:p.winner==='B'?teamB:'Tie';
+      const barColor = p.winner==='A'?'var(--accent)':p.winner==='B'?'var(--accent2)':'var(--muted)';
+      const barW = Math.min(100, parseFloat(p.margin)*5+10);
+      posRows += `<div style="display:flex;align-items:center;gap:8px;padding:3px 0;font-size:.76rem">
+        <span style="width:28px;font-weight:700">${p.pos}</span>
+        <div style="flex:1;height:14px;background:var(--surface2);border-radius:4px;overflow:hidden">
+          <div style="width:${barW}%;height:100%;background:${barColor};border-radius:4px;transition:width .3s"></div>
+        </div>
+        <span style="width:70px;text-align:right;color:${barColor};font-weight:600">${wLabel}</span>
+        <span style="width:40px;text-align:right;color:var(--muted);font-size:.68rem">${p.dominance}</span>
+      </div>`;
+    });
+  }
+  const posCard = `<div class="analysis-card"><h3>Positional Dominance</h3>
+    <p style="font-size:.72rem;color:var(--muted);margin-bottom:8px">Head-to-head positional battles directly impact win probability. Each position won adds +2 pts; winning 4+ adds +5 bonus; sweeping all 5 adds +8 bonus.</p>
+    <div style="margin-bottom:10px">${posRows}</div>
+    <p style="font-size:.78rem"><span class="hl">${teamA}:</span> ${pwA||0}/5 positions won (+${pbA||0} bonus pts) &nbsp;&middot;&nbsp; <span class="hl">${teamB}:</span> ${pwB||0}/5 positions won (+${pbB||0} bonus pts)<br><br>
+    ${posDomLead!=='Even'?`<strong>${posDomLead}</strong> controls the majority of individual matchups, earning a meaningful simulation bonus that tilts the overall outcome.`:'Positional battles are split evenly — neither team gains a dominance bonus edge.'}</p></div>`;
+
+  return statsCard + accCard + schemeCard + posCard + synCard;
 }
 
 function buildVerdict(d) {
-  const {teamA,teamB,pctA,pctB,winner,matchups,rosterA,rosterB,synA,synB,accA,accB,tsA,tsB} = d;
+  const {teamA,teamB,pctA,pctB,winner,matchups,rosterA,rosterB,synA,synB,accA,accB,tsA,tsB,posWinsA,posWinsB,posBonusA,posBonusB} = d;
   const wName = winner==='A'?teamA:teamB;
   const lName = winner==='A'?teamB:teamA;
   const wPct = winner==='A'?pctA:pctB;
-  const posWins = matchups.filter(m=>m.winner===winner).length;
+  const wPosWins = winner==='A'?(posWinsA||0):(posWinsB||0);
+  const lPosWins = winner==='A'?(posWinsB||0):(posWinsA||0);
+  const wPosBonus = winner==='A'?(posBonusA||0):(posBonusB||0);
   const margin = Math.abs(pctA-pctB);
   const closeness = margin<=4?"a razor-thin margin":margin<=10?"a solid advantage":margin<=18?"a clear advantage":"a commanding advantage";
 
@@ -948,12 +997,23 @@ function buildVerdict(d) {
   const bestRecentB = [...rosterB].sort((a,b)=>(b.stats?b.stats.per:0)-(a.stats?a.stats.per:0))[0];
 
   let v = `<h3>Expert Verdict</h3><p>`;
-  v += `<strong>${wName}</strong> takes this matchup with ${closeness} at <strong>${wPct}% win probability</strong>, winning ${posWins} of 5 positional battles. `;
+  v += `<strong>${wName}</strong> takes this matchup with ${closeness} at <strong>${wPct}% win probability</strong>, winning ${wPosWins} of 5 positional battles. `;
+
+  // Positional dominance context
+  if (wPosWins >= 5) {
+    v += `A clean sweep across all five positions earned a massive +${wPosBonus} pt dominance bonus — ${wName} is simply deeper and better at every spot. `;
+  } else if (wPosWins >= 4) {
+    v += `Winning ${wPosWins} of 5 head-to-head matchups earns ${wName} a +${wPosBonus} pt positional dominance bonus, significantly tilting the simulation. `;
+  } else if (wPosWins >= 3) {
+    v += `${wName} edges out the positional battle ${wPosWins}-${lPosWins}, earning a +${wPosBonus} pt bonus from individual matchup dominance. `;
+  } else {
+    v += `Despite losing the positional head-to-head count ${wPosWins}-${lPosWins}, ${wName}'s aggregate statistical edge still carries the day. `;
+  }
 
   // Stats-grounded verdict
   const wTS = winner==='A'?tsA:tsB;
   const lTS = winner==='A'?tsB:tsA;
-  v += `The simulation weighs current production heavily: ${wName}'s roster averages ${wTS.ppg} PPG on ${wTS.tsPct}% TS with a ${wTS.per} PER, `;
+  v += `Current production remains the heaviest factor: ${wName}'s roster averages ${wTS.ppg} PPG on ${wTS.tsPct}% TS with a ${wTS.per} PER, `;
   v += `compared to ${lName}'s ${lTS.ppg} PPG on ${lTS.tsPct}% TS (${lTS.per} PER). `;
 
   v += `${bestRecentA.name} (${bestRecentA.stats?bestRecentA.stats.per+' PER':'—'}) anchors ${teamA}, while ${bestRecentB.name} (${bestRecentB.stats?bestRecentB.stats.per+' PER':'—'}) leads ${teamB}. `;
@@ -963,14 +1023,14 @@ function buildVerdict(d) {
   const accTotalB = accB.mvps*5+accB.rings*4+accB.fmvps*4;
   const hwEdge = accTotalA>accTotalB?teamA:accTotalB>accTotalA?teamB:null;
   if (hwEdge && hwEdge !== wName) {
-    v += `Despite ${hwEdge}'s superior championship pedigree, current statistical output gives ${wName} the edge — recent form outweighs past glory in this model. `;
+    v += `Despite ${hwEdge}'s superior championship pedigree, current statistical output and positional matchup results give ${wName} the edge. `;
   } else if (hwEdge === wName) {
-    v += `${wName} also holds the accolades edge, reinforcing their advantage with proven winning pedigree. `;
+    v += `${wName} also holds the accolades edge, reinforcing their positional dominance with proven winning pedigree. `;
   }
 
   if (margin <= 4) v += `This is essentially a coin flip — either squad could win on any given night.`;
-  else if (margin <= 10) v += `${lName} has a viable path through key individual outperformance, but ${wName}'s overall statistical profile is stronger.`;
-  else v += `${lName} would need career-best outings from multiple players to overcome ${wName}'s statistical superiority.`;
+  else if (margin <= 10) v += `${lName} has a viable path through key individual outperformance, but ${wName}'s positional and statistical profile is stronger.`;
+  else v += `${lName} would need career-best outings from multiple players to overcome ${wName}'s positional dominance and statistical superiority.`;
 
   v += `</p>`;
   return v;
@@ -1047,6 +1107,13 @@ function buildDetailHTML(d) {
   html += `<div class="detail-section"><h4>Accolades</h4>
     <p><strong>${d.teamA}:</strong> ${fA(d.accA)}<br><strong>${d.teamB}:</strong> ${fA(d.accB)}</p></div>`;
 
+  // Positional Dominance
+  if (d.posMargins && d.posMargins.length) {
+    html += `<div class="detail-section"><h4>Positional Dominance Impact</h4>
+      <p style="font-size:.72rem;color:var(--text2);margin-bottom:6px">Each position won = +2 pts &middot; 4+ wins = +5 bonus &middot; Sweep = +8 bonus</p>
+      <p><strong>${d.teamA}:</strong> ${d.posWinsA||0}/5 positions won (+${d.posBonusA||0} bonus pts) &nbsp;&middot;&nbsp; <strong>${d.teamB}:</strong> ${d.posWinsB||0}/5 positions won (+${d.posBonusB||0} bonus pts)</p></div>`;
+  }
+
   // Matchups
   html += `<div class="detail-section"><h4>Positional Matchups</h4><table class="detail-matchups">`;
   d.matchups.forEach(m => {
@@ -1065,10 +1132,12 @@ function buildDetailHTML(d) {
   html += `</table></div>`;
 
   const wName = d.winner==='A'?d.teamA:d.teamB;
+  const wPosW = d.winner==='A'?(d.posWinsA||0):(d.posWinsB||0);
   const margin = Math.abs(d.pctA-d.pctB);
   const closeness = margin<=4?"razor-thin":margin<=10?"solid":margin<=18?"clear":"commanding";
+  const posNote = wPosW>=4?` Winning ${wPosW}/5 positional battles earned a significant dominance bonus.`:wPosW>=3?` Edging ${wPosW}/5 positional matchups contributed to the result.`:'';
   html += `<div class="detail-section"><h4>Verdict</h4>
-    <p><strong>${wName}</strong> wins with a ${closeness} ${Math.max(d.pctA,d.pctB)}% win probability. ${margin<=4?'A true toss-up — could go either way.':''}</p></div>`;
+    <p><strong>${wName}</strong> wins with a ${closeness} ${Math.max(d.pctA,d.pctB)}% win probability.${posNote} ${margin<=4?'A true toss-up — could go either way.':''}</p></div>`;
   return html;
 }
 
